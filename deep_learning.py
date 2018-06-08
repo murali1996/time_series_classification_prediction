@@ -5,21 +5,23 @@ Created on Fri Jun  8 18:38:56 2018
 """
 #%% Libraries
 import numpy as np
-import tensorflow as tf
 from matplotlib import pyplot as plt
-
-from keras.models import Sequential
-from keras.layers import Dense, Activation, Reshape, Flatten, Input
-from keras.layers import Conv1D, MaxPooling1D
-from keras.layers import BatchNormalization, Dropout
-from keras.layers import LSTM, GRU, Masking
-from keras.optimizers import SGD, RMSprop, Adam
 
 import datasets.data_reader
 from helpers import train_test_split, progressBar
-from losses import categorical_crossentropy, cosine_distance, regression_error, hinge_loss
 
-# %%TODO:
+from losses import categorical_crossentropy, cosine_distance, regression_error, hinge_loss
+import tensorflow as tf
+
+#from keras.models import Sequential
+#from keras.layers import Dense, Activation, Reshape, Flatten, Input
+#from keras.layers import Conv1D, MaxPooling1D
+#from keras.layers import BatchNormalization, Dropout
+#from keras.layers import LSTM, GRU, Masking
+#from keras.optimizers import SGD, RMSprop, Adam
+
+#%% PART 1
+# TODO:
 # 1. Implement custom objectives:
 #    cross-entropy (done), cosine distance,
 #    regression error, hinge loss
@@ -29,36 +31,45 @@ from losses import categorical_crossentropy, cosine_distance, regression_error, 
 #    cross-entropy, cosine distance, and hinge loss.
 #    Plot loss/accuracy as a function of epoch on one graph.
 #    (9 models total)
-
-#%% PART 1
 #%% 1.1 Load data
-x, y = datasets.data_reader.read_clean_dataset(summary=True)
-y = datasets.data_reader.one_hot(y)
+x, y_labels = datasets.data_reader.read_clean_dataset(summary=True)
+y = datasets.data_reader.one_hot(y_labels)
 x_train, y_train, x_test, y_test = train_test_split(x, y)
 feat_dim, out_dim = x.shape[1], y.shape[1]
-#%% 1.2 Basic Data Analysis
-## Shapes
-#x.shape
-#for data in [x_train, y_train, x_test, y_test]:
-#    print(data.shape)
-## Range of values
-#print('max and min in x_train: {}, {}'.format(np.max(x_train),np.min(x_train)))
-#print('max and min in x_test: {}, {}'.format(np.max(x_test),np.min(x_test)))
-#print('any NaNs? {}, {}'.format(np.sum(np.isnan(x_train)),np.sum(np.isnan(x_test))))
-## Plots
-#for label in range(y_train.shape[-1]):
-#    labelled = x_train[np.where(y_train[:,label]==1)[0],:]
-#    fig_rows, fig_cols = 2, 2
-#    fig, ax = plt.subplots(fig_rows, fig_cols, figsize=(16, 5))
-#    row_inds = np.random.choice(labelled.shape[0],fig_rows*fig_cols,replace=False);
-#    for fig_row in range(fig_rows):
-#        for fig_col in range(fig_cols):
-#            ax[fig_row,fig_col].plot(labelled[row_inds[fig_row*fig_cols+fig_col],:]);
-#            ax[fig_row,fig_col].set_title('{}'.format(row_inds[fig_row*fig_cols+fig_col]));
-#    for axx in ax.flat: # Hide x labels and tick labels for top plots and y ticks for right plots.
-#        axx.label_outer()
-#    fig.suptitle('Label: {}'.format(label))
-#%% 1.3 RNN for Time-Series Classification
+#%% 1.2 Some Data Analysis
+# Shapes
+for data in [x_train, y_train, x_test, y_test]:
+    print(data.shape)
+# Range of values
+print('max and min in x_train: {}, {}'.format(np.max(x_train),np.min(x_train)))
+print('max and min in x_test: {}, {}'.format(np.max(x_test),np.min(x_test)))
+print('any NaNs? {}, {}'.format(np.sum(np.isnan(x_train)),np.sum(np.isnan(x_test))))
+# Plots
+for label in range(y_train.shape[-1]):
+    labelled = x_train[np.where(y_train[:,label]==1)[0],:]
+    fig_rows, fig_cols = 2, 2
+    fig, ax = plt.subplots(fig_rows, fig_cols, figsize=(16, 5))
+    row_inds = np.random.choice(labelled.shape[0],fig_rows*fig_cols,replace=False);
+    for fig_row in range(fig_rows):
+        for fig_col in range(fig_cols):
+            ax[fig_row,fig_col].plot(labelled[row_inds[fig_row*fig_cols+fig_col],:]);
+            ax[fig_row,fig_col].set_title('{}'.format(row_inds[fig_row*fig_cols+fig_col]));
+    for axx in ax.flat: # Hide x labels and tick labels for top plots and y ticks for right plots.
+        axx.label_outer()
+    fig.suptitle('Label: {}'.format(label))
+# PCA; Dimensionality Reduction and TSNE Visualization
+from sklearn.decomposition import PCA
+pca = PCA(n_components=x.shape[-1]).fit(x);
+plt.figure(); plt.plot(pca.explained_variance_); plt.grid(); plt.title('PCA Cummulative Variance across all dims')
+pca_top2 = pca.transform(x)[:,:2]
+plt.figure(); plt.scatter(pca_top2[:,0],pca_top2[:,1], s=0.01); plt.title('PCA Top-2 Dimensions')
+from sklearn.manifold import TSNE
+tsne = TSNE(n_components=2, perplexity=30, learning_rate=100)
+tsne_dims2 = tsne.fit_transform(x)
+plt.figure(); plt.scatter(pca_top2[:,0],pca_top2[:,1], s=0.01); plt.title('TSNE (down-to) 2 Dimensions')
+#%% 1.3 MLP for time-series classification
+# <Already  Implemeneted using Keras>
+#%% 1.4 RNN for Time-Series Classification
 class Configure(object):
     def __init__(self):
         self.rnn_units, self.state_activation = [128, 128], tf.nn.tanh;
@@ -122,39 +133,39 @@ class rnn_tf(object):
 configure = Configure();
 model = rnn_tf(configure);
 # Make data compatible with the architecture defined
-x_train, x_test = np.expand_dims(x_train,axis=-1), np.expand_dims(x_test,axis=-1);
-x_train, y_train = model.make_data_for_rnn(x_train, y_train)
-x_test, y_test = model.make_data_for_rnn(x_test, y_test)
+x_train_, x_test_ = np.expand_dims(x_train,axis=-1), np.expand_dims(x_test,axis=-1);
+x_train_, y_train_ = model.make_data_for_rnn(x_train_, y_train)
+x_test_, y_test_ = model.make_data_for_rnn(x_test_, y_test)
 # Train the model
+test_every = 1;
 with tf.Session() as sess:
     tf.global_variables_initializer().run();
-    test_every = 1;
     loss_acc_record = {}; loss_acc_record['train']=[]; loss_acc_record['test']=[];
     for epoch in range(configure.n_epochs):
         # Training
         train_loss, accuracy = 0, 0;
-        for i in range(x_train.shape[0]):
+        for i in range(x_train_.shape[0]):
             result = sess.run([model.update_step,model.loss,model.accuracy,model.preds,model.output],
-                              feed_dict={model.x_:x_train[i],model.y_:y_train[i]})
-            progressBar(i,x_train.shape[0],result[1],result[2])
+                              feed_dict={model.x_:x_train_[i],model.y_:y_train_[i]})
+            progressBar(i,x_train_.shape[0],result[1],result[2])
             train_loss+=result[1];
             accuracy+=result[2];
-        train_loss/=x_train.shape[0];
-        accuracy/=x_train.shape[0];
+        train_loss/=x_train_.shape[0];
+        accuracy/=x_train_.shape[0];
         loss_acc_record['train'].append([epoch,train_loss,accuracy])
         print('\n')
         print('Epoch: {}, Training: Avg. Loss: {:.4f} and Avg. Accuarcy: {:.4f}'.format(epoch,train_loss,accuracy))
         # Validation
         if epoch%test_every==0:
             test_loss, accuracy = 0, 0;
-            for i in range(x_test.shape[0]):
+            for i in range(x_test_.shape[0]):
                 result = sess.run([model.loss,model.accuracy,model.preds,model.output],
-                                  feed_dict={model.x_:x_test[i],model.y_:y_test[i]})
-                progressBar(i,x_test.shape[0],result[0],result[1])
+                                  feed_dict={model.x_:x_test_[i],model.y_:y_test_[i]})
+                progressBar(i,x_test_.shape[0],result[0],result[1])
                 test_loss+=result[0];
                 accuracy+=result[1];
-            test_loss/=x_test.shape[0];
-            accuracy/=x_test.shape[0];
+            test_loss/=x_test_.shape[0];
+            accuracy/=x_test_.shape[0];
             loss_acc_record['test'].append([epoch,test_loss,accuracy])
             print('\n')
             print('Epoch: {}, Testing: Avg. Loss: {:.4f} and Avg. Accuarcy: {:.4f}'.format(epoch,test_loss,accuracy))
@@ -164,8 +175,8 @@ with tf.Session() as sess:
     loss_acc_record['train'] = np.stack(loss_acc_record['train'])
     loss_acc_record['test'] = np.stack(loss_acc_record['test'])
 ## Plot graphs
-#fig, ax = plt.subplots(1,2)
-#ax[0].plot(loss_acc_record['train'][:,0],loss_acc_record['train'][:,1],'b',loss_acc_record['test'][:,0],loss_acc_record['test'][:,1],'r');
-#ax[0].set_xlabel('EPOCHS'); ax[0].set_ylabel('LOSS'); ax[0].set_title('TRAIN vs TEST LOSS'); ax[0].grid();
-#ax[1].plot(loss_acc_record['train'][:,0],loss_acc_record['train'][:,2],'b',loss_acc_record['test'][:,0],loss_acc_record['test'][:,2],'r');
-#ax[1].set_xlabel('EPOCHS'); ax[1].set_ylabel('ACCURACY'); ax[1].set_title('TRAIN vs TEST ACC'); ax[1].grid();
+fig, ax = plt.subplots(1,2)
+ax[0].plot(loss_acc_record['train'][:,0],loss_acc_record['train'][:,1],'b',loss_acc_record['test'][:,0],loss_acc_record['test'][:,1],'r');
+ax[0].set_xlabel('EPOCHS'); ax[0].set_ylabel('LOSS'); ax[0].set_title('TRAIN vs TEST LOSS'); ax[0].grid();
+ax[1].plot(loss_acc_record['train'][:,0],loss_acc_record['train'][:,2],'b',loss_acc_record['test'][:,0],loss_acc_record['test'][:,2],'r');
+ax[1].set_xlabel('EPOCHS'); ax[1].set_ylabel('ACCURACY'); ax[1].set_title('TRAIN vs TEST ACC'); ax[1].grid();
