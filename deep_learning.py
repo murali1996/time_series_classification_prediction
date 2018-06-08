@@ -142,6 +142,8 @@ with tf.Session() as sess:
         train_loss/=x_train.shape[0];
         accuracy/=x_train.shape[0];
         loss_acc_record['train'].append([epoch,train_loss,accuracy])
+        print('\n')
+        print('Epoch: {}, Training: Avg. Loss: {:.4f} and Avg. Accuarcy: {:.4f}'.format(epoch,train_loss,accuracy))
         progressBar(x_train.shape[0],x_train.shape[0],train_loss,accuracy)
         # Validation
         if epoch%test_every==0:
@@ -150,12 +152,13 @@ with tf.Session() as sess:
                 result = sess.run([model.loss,model.accuracy,model.preds,model.output],
                                   feed_dict={model.x_:x_test[i],model.y_:y_test[i]})
                 progressBar(i,x_test.shape[0],result[0],result[1])
-                test_loss+=result[1];
-                accuracy+=result[2];
+                test_loss+=result[0];
+                accuracy+=result[1];
             test_loss/=x_test.shape[0];
             accuracy/=x_test.shape[0];
             loss_acc_record['test'].append([epoch,test_loss,accuracy])
-            progressBar(x_test.shape[0],x_test.shape[0],test_loss,accuracy)
+            print('\n')
+            print('Epoch: {}, Testing: Avg. Loss: {:.4f} and Avg. Accuarcy: {:.4f}'.format(epoch,test_loss,accuracy))
         # Model Saving/ Record data/ Tensorboard Writer
         # <...>
     # Stack Results
