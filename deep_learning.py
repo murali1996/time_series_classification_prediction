@@ -144,7 +144,6 @@ with tf.Session() as sess:
         loss_acc_record['train'].append([epoch,train_loss,accuracy])
         print('\n')
         print('Epoch: {}, Training: Avg. Loss: {:.4f} and Avg. Accuarcy: {:.4f}'.format(epoch,train_loss,accuracy))
-        progressBar(x_train.shape[0],x_train.shape[0],train_loss,accuracy)
         # Validation
         if epoch%test_every==0:
             test_loss, accuracy = 0, 0;
