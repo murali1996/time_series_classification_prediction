@@ -18,13 +18,13 @@ def cosine_distance(y_true, y_pred):
     """
     # Correctness check
     tf.assert_equal(tf.shape(y_true),tf.shape(y_pred), name='assert_cond')
-    epsilon = 0.0001
+    epsilon = 0.001
     # Denominator; Norms
-    y_true_norm = tf.sqrt(tf.reduce_mean(tf.multiply(y_true,y_true)),name='y_true_norm')
-    y_pred_norm = tf.sqrt(tf.reduce_mean(tf.multiply(y_pred,y_pred)),name='y_pred_norm')
+    y_true_norm = tf.sqrt(tf.reduce_sum(tf.multiply(y_true,y_true)),name='y_true_norm')
+    y_pred_norm = tf.sqrt(tf.reduce_sum(tf.multiply(y_pred,y_pred)),name='y_pred_norm')
     den_ = tf.multiply(y_true_norm,y_pred_norm)+epsilon;
     # Numerator; Cross-multiplication
-    cross_multiply = tf.sqrt(tf.reduce_mean(tf.multiply(y_true,y_pred)),name='cross_multiply')
+    cross_multiply = tf.reduce_sum(tf.multiply(y_true,y_pred),name='cross_multiply')
     num_ = cross_multiply+epsilon;
     loss = 1-tf.div(num_,den_)
     return loss
