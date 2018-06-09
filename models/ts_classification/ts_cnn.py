@@ -15,20 +15,22 @@ from libraries import losses
 
 class Configure_CNN(object):
     def __init__(self):
-        # 1. Architecture
-        self.dropout_rate_dense = 0.2;
+        # 1. Architecture (CNNlayers + Dense layers)
+        self.dense_layer_units, self.dense_activation, self.dropout_rates = [256, 64], tf.nn.relu, [0.2, 0.0];
+        assert(len(self.dense_layer_units)==len(self.dropout_rates))
         self.custom_loss = 'cosine_distance' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
         # 2. Training and optimization
         self.batch_size, self.n_timesteps, self.n_features, self.n_classes = 128, 457, 1, 10;
         self.max_gradient_norm, self.learning_rate = 5, 0.001;
         self.n_epochs, self.patience = 10, 7; # Patience: epochs (with no loss improvement) until before terminating the training process
         # 3. Directories, Sub-directories, Paths
-        self.main_dir = './logs';
-        self.model_dir = os.path.join(self.main_dir, 'rnn_tf_'+self.custom_loss);
-        self.model_save_training = os.path.join(self.model_dir, 'train_best')
-        self.model_save_inference = os.path.join(self.model_dir, 'infer_best')
+        self.main_dir = './logs/ts_classification';
+        self.model_dir = os.path.join(self.main_dir, 'cnn_tf_'+self.custom_loss);
+        self.model_save_training = os.path.join(self.model_dir, 'train_best');
+        self.model_save_inference = os.path.join(self.model_dir, 'infer_best');
         self.tf_logs = os.path.join(self.model_dir, 'tf_logs');
         self.images = os.path.join(self.model_dir, 'images');
+        self.configure_save_path = os.path.join(self.model_dir,'model_configs');
     def create_folders_(self):
         dirs = [self.mmain_dir, self.model_dir, self.model_save_training, self.model_save_inference, self.tf_logs, self.images]
         for dir_ in dirs:
@@ -41,28 +43,34 @@ class CNN_tf(object):
             self.training = tf.placeholder(tf.bool) # True: training phase, False: testing/inference phase
             self.x_ = tf.placeholder(tf.float32, shape=[None,self.configure.n_timesteps,self.configure.n_features]) # [batch_size,n_timesteps,n_features]
             self.y_ = tf.placeholder(tf.float32, shape=[None,self.configure.n_classes]) # [batch_size,n_classes]
-        # Batch Normalization can be performed to boost the training phase learning
-        with tf.variable_scope('first_set_of_layers'):
+        # Batch Normalization can be performed to alleviate the pain of slow learning due to bad normalization
+        with tf.variable_scope('cnn_layers_1'):
 			# [batch_size, 457, 1] --> [batch_size, 457, n_filters]
             out_1_1 = tf.layers.conv1d(inputs=self.x_, filters=16, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_1_1')
             out_1_2 = tf.layers.conv1d(inputs=self.x_, filters=16, kernel_size=5, strides=1, padding='same', activation=tf.nn.relu, name='out_1_2')
             out_1_3 = tf.layers.conv1d(inputs=self.x_, filters=16, kernel_size=7, strides=1, padding='same', activation=tf.nn.relu, name='out_1_3')
             out_1 = tf.concat([out_1_1,out_1_2,out_1_3], axis=-1, name='out_1') # [batch_size, 457, 48]
             max_pool_1 = tf.layers.max_pooling1d(inputs=out_1, pool_size=2, strides=2, padding='same', name='max_pool_1') # [batch_size, 229, 48]
-        with tf.variable_scope('second_set_of_layers'):
+        with tf.variable_scope('cnn_layers_2'):
 			# [batch_size, 229, 48] --> [batch_size, 229, n_filters]
             out_2_1 = tf.layers.conv1d(inputs=max_pool_1, filters=8, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_2_1')
             out_2_2 = tf.layers.conv1d(inputs=max_pool_1, filters=6, kernel_size=5, strides=1, padding='same', activation=tf.nn.relu, name='out_2_2')
             out_2_3 = tf.layers.conv1d(inputs=max_pool_1, filters=4, kernel_size=7, strides=1, padding='same', activation=tf.nn.relu, name='out_2_3')
             out_2 = tf.concat([out_2_1,out_2_2,out_2_3], axis=-1, name='out_2') # [batch_size, 229, 18]
             max_pool_2 = tf.layers.max_pooling1d(inputs=out_2, pool_size=2, strides=2, padding='same', name='max_pool_1') # [batch_size, 115, 18]
-        with tf.variable_scope('flatten_and dropout_layers'):
+        with tf.variable_scope('flatten_layer'):
             flat_out = tf.reshape(max_pool_2, (-1,115*18), name='flat_out') # Along each batch # [batch_size, 115*18]
-            flat_out_dense_1 = tf.layers.dense(inputs=flat_out, units=256, activation=tf.nn.relu, name='flat_out_dense_1')
-            flat_out_dense_1 = tf.layers.dropout(flat_out_dense_1, rate=self.configure.dropout_rate_dense, training=self.training, name='flat_out_dense_1_dropout')
-            flat_out_dense_2 = tf.layers.dense(inputs=flat_out_dense_1, units=64, activation=tf.nn.relu, name='flat_out_dense_2')
-            flat_out_dense_2 = tf.layers.dropout(flat_out_dense_2, rate=self.configure.dropout_rate_dense, training=self.training, name='flat_out_dense_2_dropout')
-            self.preds = tf.layers.dense(inputs=flat_out_dense_2, units=self.configure.n_classes, activation=tf.nn.relu, name='predictions')
+        output_ = flat_out;
+        with tf.variable_scope('multi_dense_layers'):
+            for i, units in enumerate(self.configure.dense_layer_units):
+                output_ = tf.layers.dense(inputs=output_, units=units, activation=self.configure.dense_activation, name='dense_{}'.format(i))
+                output_ = tf.layers.dropout(output_, rate=self.configure.dropout_rates[i], training=self.training, name='dropout_{}'.format(i))
+            self.preds = tf.layers.dense(inputs=output_, units=self.configure.n_classes, activation=self.configure.dense_activation, name='predictions')
+#            flat_out_dense_1 = tf.layers.dense(inputs=flat_out, units=256, activation=tf.nn.relu, name='flat_out_dense_1')
+#            flat_out_dense_1 = tf.layers.dropout(flat_out_dense_1, rate=self.configure.dropout_rate_dense, training=self.training, name='flat_out_dense_1_dropout')
+#            flat_out_dense_2 = tf.layers.dense(inputs=flat_out_dense_1, units=64, activation=tf.nn.relu, name='flat_out_dense_2')
+#            flat_out_dense_2 = tf.layers.dropout(flat_out_dense_2, rate=self.configure.dropout_rate_dense, training=self.training, name='flat_out_dense_2_dropout')
+#            self.preds = tf.layers.dense(inputs=flat_out_dense_2, units=self.configure.n_classes, activation=tf.nn.relu, name='predictions')
         with tf.variable_scope('loss_and_optimizer'):
             # Loss function
             self.loss = (tf.reduce_sum(getattr(losses, self.configure.custom_loss)(self.y_,self.preds))/tf.cast(tf.shape(self.x_)[0],tf.float32))
@@ -77,9 +85,7 @@ class CNN_tf(object):
             #self.lr = tf.train.exponential_decay(self.configure.learning_rate, self.global_step, self.configure.max_global_steps_assumed, 0.1)
             self.update_step = tf.train.AdamOptimizer(self.lr).apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
     def make_data_for_batch_training_CNN(self, x_data, y_data): # Inputs:: x_data:[n_samples,n_timesteps,n_features] y_data:[n_samples,n_classes]
-        '''
-        Zero Mean Substraction can be done additionally
-        '''
+        #  Zero Mean Substraction can be performed additionally
         assert(x_data.shape[0]==y_data.shape[0]);
         n_rows = x_data.shape[0];
         x_data_new, y_data_new = [], [];

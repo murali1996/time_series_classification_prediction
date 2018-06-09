@@ -44,5 +44,26 @@ def hinge_loss(y_true, y_pred):
     Hinge loss loss using only basic tensorflow ops.
     (Do not use tf.losses, tf.nn, etc.)
     """
-    return
-    #return loss
+    # (Differentiable) Hinge Loss as defined in https://en.wikipedia.org/wiki/Hinge_loss
+    # Input: y_true are labels having values 0.0 or 1.0, y_pred are logits or unnormalized predicted class scores
+    # Convert labels to +1/-1 floats and multiply with logits
+    y_true = 2*y_true-1;
+    loss_ = tf.nn.relu(1-tf.multiply(y_true,y_pred))
+    loss = tf.reduce_mean(loss_);
+    return loss
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

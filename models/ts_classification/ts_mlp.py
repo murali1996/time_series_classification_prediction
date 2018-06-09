@@ -15,9 +15,9 @@ from libraries import losses
 
 class Configure_MLP(object):
     def __init__(self):
-        # 1. Architecture
-        self.dense_layer_units, self.activation = [256, 128, 64], tf.nn.relu;
-        self.dropout_rates = [0.0, 0.2, 0.1];
+        # 1. Architecture (Dense layers)
+        self.dense_layer_units, self.dense_activation, self.dropout_rates = [256, 128, 64], tf.nn.relu, [0.0, 0.2, 0.1];
+        assert(len(self.dense_layer_units)==len(self.dropout_rates))
         self.custom_loss = 'cosine_distance' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
         # 2. Training and optimization
         self.batch_size, self.n_timesteps, self.n_classes = 128, 457, 10;
@@ -25,12 +25,13 @@ class Configure_MLP(object):
         self.n_epochs = 10;
         self.patience = 7; # epochs until before terminating the training process
         # 3. Directories, Sub-directories, Paths
-        self.main_dir = './logs';
+        self.main_dir = './logs/ts_classification';
         self.model_dir = os.path.join(self.main_dir, 'mlp_tf_'+self.custom_loss);
         self.model_save_training = os.path.join(self.model_dir, 'train_best')
         self.model_save_inference = os.path.join(self.model_dir, 'infer_best')
         self.tf_logs = os.path.join(self.model_dir, 'tf_logs');
         self.images = os.path.join(self.model_dir, 'images');
+        self.configure_save_path = os.path.join(self.model_dir,'model_configs');
     def create_folders_(self):
         dirs = [self.mmain_dir, self.model_dir, self.model_save_training, self.model_save_inference, self.tf_logs, self.images]
         for dir_ in dirs:
@@ -44,11 +45,11 @@ class MLP_tf(object):
             self.x_ = tf.placeholder(tf.float32, shape=[None,self.configure.n_timesteps]) # [batch_size,n_timesteps]
             self.y_ = tf.placeholder(tf.float32, shape=[None,self.configure.n_classes]) # [batch_size,n_classes]
         output_ = self.x_; 
-        with tf.variable_scope('multi_layer_mlp'):
+        with tf.variable_scope('multi_dense_layers'):
             for i, units in enumerate(self.configure.dense_layer_units):
-                output_ = tf.layers.dense(inputs=output_, units=units, activation=self.configure.activation, name='dense_{}'.format(i))
+                output_ = tf.layers.dense(inputs=output_, units=units, activation=self.configure.dense_activation, name='dense_{}'.format(i))
                 output_ = tf.layers.dropout(output_, rate=self.configure.dropout_rates[i], training=self.training, name='dropout_{}'.format(i))
-            self.preds = tf.layers.dense(inputs=output_, units=self.configure.n_classes, activation=self.configure.activation, name='predictions')
+            self.preds = tf.layers.dense(inputs=output_, units=self.configure.n_classes, activation=self.configure.dense_activation, name='predictions')
         with tf.variable_scope('loss_and_optimizer'):
             # Loss function
             self.loss = (tf.reduce_sum(getattr(losses, self.configure.custom_loss)(self.y_,self.preds))/tf.cast(tf.shape(self.x_)[0],tf.float32))
