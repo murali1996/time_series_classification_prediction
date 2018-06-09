@@ -66,7 +66,7 @@ plt.figure(); plt.scatter(pca_top2[:,0],pca_top2[:,1], s=0.01); plt.title('PCA T
 from sklearn.manifold import TSNE
 tsne = TSNE(n_components=2, perplexity=30, learning_rate=100)
 tsne_dims2 = tsne.fit_transform(x)
-plt.figure(); plt.scatter(pca_top2[:,0],pca_top2[:,1], s=0.01); plt.title('TSNE (down-to) 2 Dimensions')
+plt.figure(); plt.scatter(tsne_dims2[:,0],tsne_dims2[:,1], s=0.1); plt.title('TSNE (down-to) 2 Dimensions')
 #%% 1.3 MLP for time-series classification
 # <Already  Implemeneted using Keras>
 #%% 1.4 RNN for Time-Series Classification

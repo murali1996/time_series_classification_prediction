@@ -5,14 +5,15 @@ PART-1
 
 While LSTM RNNs are capable of learning and remembering over long sequences of input data, it becomes increasingly challenging as the sequence length increases. In the given (clean) data-set, each sequence is 457 points long which implies that a basic LSTm architecture takes quite a long time to train. Hence, to improve the scenario, I've adopted some techniques which plausibly make the model better:
 1) Using a bi-directional LSTM instead of uni-directional LSTM
-2) Regularization (dropout,batch-normalization,L1,L2)
+2) Regularization (dropout/L1/L2)
+3) Compute average correlation/cosine similarity for each label.
 
-I have some more techniques which I haven't implemented yet but seem to enhance the model from a theoritical point of view are:
-1) A recurrent or convolutional or dense auto-encoder over short-segments of time-series data to generate a sequence of latent-vectors(lVecs) for the lengthy time-series data. These lVecs can then be used in training another RNN to classify.
-2) Input-Attention Mechanism in LSTM architecture
-3) Truncated BPTT in LSTMs
-4) Short-term feature extraction:- Breaking the lengthy sequence into consecutive overlapping short-segments of data and extracting suitable features for each of the short-segments, which then act as a summarized time-series information. MFCC feature extraction is a suitable example here.
-5) Truncating the data:- Selectively truncating the head and/or tail sections that contain trivial/irrelevant information in the time-series data.
+I have some more techniques in mind which I haven't implemented yet but can to enhance the model from a theoritical point of view are:
+1) Since tSNE vizualization explained a bunch of clusters in the data, simple techniques such as k-NN with Eucledian/Cosine distance as measures can be used for classification of test data. Also, Dynamic Time Warping technique can come handy here. I have plotted and checked a bunch of sequences belonging to each leabel and could find out that sequences of same labels had similar patterns along the time-axis. But the down-side of this approach is that good results can be obtained when the test-sequences are of similar length as the train-sequences.
+2) A recurrent or convolutional or dense auto-encoder over short-segments of time-series data to generate a sequence of latent-vectors(lVecs) for the lengthy time-series data. These lVecs can then be used in training another RNN to classify.
+3) Input-Attention Mechanism and/or Truncated BPTT in LSTM architecture while training the basic LSTM architecture on lengthy time-series data.
+4) Short-term feature extraction; Breaking the lengthy sequence into consecutive overlapping short-segments of data and extracting suitable features for each of the short-segments, which then act as a summarized time-series information. MFCC feature extraction is a suitable example here.
+5) Truncating the data; Selectively truncating the head and/or tail sections that contain trivial/irrelevant information in the time-series data.
 
 
 PART-2
