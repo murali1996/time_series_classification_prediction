@@ -21,7 +21,7 @@ class Configure_RNN(object):
         assert(len(self.dense_layer_units)==len(self.dropout_rates))
         self.custom_loss = 'cosine_distance' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
         # 2. Training and optimization
-        self.batch_size, self.n_features, self.n_classes = 128, 1, 10;
+        self.batch_size, self.n_timesteps, self.n_features, self.n_classes = 128, 457, 1, 10; # Although n_timesteps will not be used by architecture, it is kept for consistency in code
         self.max_gradient_norm, self.learning_rate = 5, 0.001;
         self.n_epochs, self.patience = 10, 7; # Patience: epochs (with no loss improvement) until before terminating the training process
         # 3. Directories, Sub-directories, Paths
@@ -56,18 +56,7 @@ class RNN_tf(object):
                 rnn_stack_backward = tf.nn.rnn_cell.MultiRNNCell(rnn_cells_backward)
                 #rnn_stack_backward = tf.contrib.rnn.DropoutWrapper(rnn_stack_backward, output_keep_prob=self.configure.keep_prob_rnn)
                 outputs_backward, state_backward = tf.nn.dynamic_rnn(rnn_stack_backward, x_backward_, dtype = tf.float32)
-            self.output = tf.concat([outputs_forward[:,-1,:],outputs_backward[:,-1,:]],axis=-1) # [batch_size,2*self.configure.rnn_units[-1]] 
-#        with tf.variable_scope('multi_dense_layers'):
-#            self.weights = {'w_1':self.init_weights([2*self.configure.rnn_units[-1],256],'w_1'),
-#                            'w_2':self.init_weights([256,64],'w_2'),
-#                            'output_w':self.init_weights([64,self.configure.n_classes],'output_w')}
-#            self.bias = {'b_1':self.init_bias([256],'b_1'),
-#                         'b_2':self.init_bias([64],'b_2'),
-#                         'output_b':self.init_bias([self.configure.n_classes],'output_b')}
-#            dense_1 = tf.add(tf.matmul(self.output,self.weights['w_1']),self.bias['b_1'],name='dense_1')
-#            dense_1 = tf.layers.dropout(dense_1, rate=self.configure.drop_rate_dense, training=self.training)
-#            dense_2 = tf.add(tf.matmul(dense_1,self.weights['w_2']),self.bias['b_2'],name='dense_2')
-#            self.preds = tf.add(tf.matmul(dense_2,self.weights['output_w']),self.bias['output_b'],name='preds')     
+            self.output = tf.concat([outputs_forward[:,-1,:],outputs_backward[:,-1,:]],axis=-1) # [batch_size,2*self.configure.rnn_units[-1]]      
         output_ = self.output;
         with tf.variable_scope('multi_dense_layers'):
             for i, units in enumerate(self.configure.dense_layer_units):
@@ -75,18 +64,20 @@ class RNN_tf(object):
                 output_ = tf.layers.dropout(output_, rate=self.configure.dropout_rates[i], training=self.training, name='dropout_{}'.format(i))
             self.preds = tf.layers.dense(inputs=output_, units=self.configure.n_classes, activation=self.configure.dense_activation, name='predictions')
         with tf.variable_scope('loss_and_optimizer'):
-            # Loss function
+            # 1. Loss function
             self.loss = (tf.reduce_sum(getattr(losses, self.configure.custom_loss)(self.y_,self.preds))/tf.cast(tf.shape(self.x_)[0],tf.float32))
             self.accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(self.y_,1), tf.argmax(self.preds,1)), tf.float32), name='accuracy')
-            # Calculate and clip gradients
+            # 2. Calculate and clip gradients
             params = tf.trainable_variables()
             gradients = tf.gradients(self.loss, params)
             clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.configure.max_gradient_norm)
-            # Optimization and Update
-            self.lr = self.configure.learning_rate;
+            # 3. Set learning Rate: Exponential Decay or a constant value
             self.global_step = tf.Variable(0, trainable=False) # global_step just keeps track of the number of batches seen so far
             #self.lr = tf.train.exponential_decay(self.configure.learning_rate, self.global_step, self.configure.max_global_steps_assumed, 0.1)
+            self.lr = self.configure.learning_rate;
+            # 4. Update weights and biases i.e trainable parameters
             self.update_step = tf.train.AdamOptimizer(self.lr).apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
+            #self.update_step = tf.train.RMSPropOptimizer(self.lr).apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
     def init_weights(self, shape, name):
         return tf.Variable(tf.truncated_normal(shape, stddev = 0.1),name=name)
     def init_bias(self, shape, name):
@@ -104,3 +95,15 @@ class RNN_tf(object):
         x_data_new = np.stack(x_data_new);
         y_data_new = np.stack(y_data_new);
         return x_data_new, y_data_new
+    
+#        with tf.variable_scope('multi_dense_layers'):
+#            self.weights = {'w_1':self.init_weights([2*self.configure.rnn_units[-1],256],'w_1'),
+#                            'w_2':self.init_weights([256,64],'w_2'),
+#                            'output_w':self.init_weights([64,self.configure.n_classes],'output_w')}
+#            self.bias = {'b_1':self.init_bias([256],'b_1'),
+#                         'b_2':self.init_bias([64],'b_2'),
+#                         'output_b':self.init_bias([self.configure.n_classes],'output_b')}
+#            dense_1 = tf.add(tf.matmul(self.output,self.weights['w_1']),self.bias['b_1'],name='dense_1')
+#            dense_1 = tf.layers.dropout(dense_1, rate=self.configure.drop_rate_dense, training=self.training)
+#            dense_2 = tf.add(tf.matmul(dense_1,self.weights['w_2']),self.bias['b_2'],name='dense_2')
+#            self.preds = tf.add(tf.matmul(dense_2,self.weights['output_w']),self.bias['output_b'],name='preds')

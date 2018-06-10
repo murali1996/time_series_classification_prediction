@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jun  8 18:41:40 2018
+Created on Fri Jun  8 18:38:56 2018
 @author: murali.sai
 """
 import math
@@ -24,5 +24,12 @@ def progressBar(value, endvalue, loss_val=None, accuracy=None, bar_length=20):
         arrow = '-' * int(round(percent * bar_length)-1) + '>'
         spaces = ' ' * (bar_length - len(arrow))
         sys.stdout.write("\rPercent: [{0}] {1}% || Loss: {2} || Acc: {3}".format(arrow + spaces, int(round(percent * 100)), loss_val, accuracy))
+        sys.stdout.flush()
+        return
+def progressBarSimple(value, endvalue, bar_length=20):
+        percent = float(value) / endvalue
+        arrow = '-' * int(round(percent * bar_length)-1) + '>'
+        spaces = ' ' * (bar_length - len(arrow))
+        sys.stdout.write("\rPercent: [{0}] {1}%".format(arrow + spaces, int(round(percent * 100))))
         sys.stdout.flush()
         return

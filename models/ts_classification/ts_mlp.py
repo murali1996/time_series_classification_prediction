@@ -20,7 +20,7 @@ class Configure_MLP(object):
         assert(len(self.dense_layer_units)==len(self.dropout_rates))
         self.custom_loss = 'cosine_distance' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
         # 2. Training and optimization
-        self.batch_size, self.n_timesteps, self.n_classes = 128, 457, 10;
+        self.batch_size, self.n_timesteps, self.n_features, self.n_classes = 128, 457, 1, 10; # Although n_features will not be used by architecture, it is kept for consistency in code
         self.max_gradient_norm, self.learning_rate = 5, 0.001;
         self.n_epochs = 10;
         self.patience = 7; # epochs until before terminating the training process
@@ -51,18 +51,20 @@ class MLP_tf(object):
                 output_ = tf.layers.dropout(output_, rate=self.configure.dropout_rates[i], training=self.training, name='dropout_{}'.format(i))
             self.preds = tf.layers.dense(inputs=output_, units=self.configure.n_classes, activation=self.configure.dense_activation, name='predictions')
         with tf.variable_scope('loss_and_optimizer'):
-            # Loss function
+            # 1. Loss function
             self.loss = (tf.reduce_sum(getattr(losses, self.configure.custom_loss)(self.y_,self.preds))/tf.cast(tf.shape(self.x_)[0],tf.float32))
             self.accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(self.y_,1), tf.argmax(self.preds,1)), tf.float32), name='accuracy')
-            # Calculate and clip gradients
+            # 2. Calculate and clip gradients
             params = tf.trainable_variables()
             gradients = tf.gradients(self.loss, params)
             clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.configure.max_gradient_norm)
-            # Optimization and Update
-            self.lr = self.configure.learning_rate;
+            # 3. Set learning Rate: Exponential Decay or a constant value
             self.global_step = tf.Variable(0, trainable=False) # global_step just keeps track of the number of batches seen so far
             #self.lr = tf.train.exponential_decay(self.configure.learning_rate, self.global_step, self.configure.max_global_steps_assumed, 0.1)
+            self.lr = self.configure.learning_rate;
+            # 4. Update weights and biases i.e trainable parameters
             self.update_step = tf.train.AdamOptimizer(self.lr).apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
+            #self.update_step = tf.train.RMSPropOptimizer(self.lr).apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
     def make_data_for_batch_training_MLP(self, x_data, y_data): # Inputs:: x_data:[n_samples,n_timesteps] y_data:[n_samples,n_classes]
         assert(x_data.shape[0]==y_data.shape[0]);
         n_rows = x_data.shape[0];

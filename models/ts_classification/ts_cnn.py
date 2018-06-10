@@ -66,24 +66,21 @@ class CNN_tf(object):
                 output_ = tf.layers.dense(inputs=output_, units=units, activation=self.configure.dense_activation, name='dense_{}'.format(i))
                 output_ = tf.layers.dropout(output_, rate=self.configure.dropout_rates[i], training=self.training, name='dropout_{}'.format(i))
             self.preds = tf.layers.dense(inputs=output_, units=self.configure.n_classes, activation=self.configure.dense_activation, name='predictions')
-#            flat_out_dense_1 = tf.layers.dense(inputs=flat_out, units=256, activation=tf.nn.relu, name='flat_out_dense_1')
-#            flat_out_dense_1 = tf.layers.dropout(flat_out_dense_1, rate=self.configure.dropout_rate_dense, training=self.training, name='flat_out_dense_1_dropout')
-#            flat_out_dense_2 = tf.layers.dense(inputs=flat_out_dense_1, units=64, activation=tf.nn.relu, name='flat_out_dense_2')
-#            flat_out_dense_2 = tf.layers.dropout(flat_out_dense_2, rate=self.configure.dropout_rate_dense, training=self.training, name='flat_out_dense_2_dropout')
-#            self.preds = tf.layers.dense(inputs=flat_out_dense_2, units=self.configure.n_classes, activation=tf.nn.relu, name='predictions')
         with tf.variable_scope('loss_and_optimizer'):
-            # Loss function
+            # 1. Loss function
             self.loss = (tf.reduce_sum(getattr(losses, self.configure.custom_loss)(self.y_,self.preds))/tf.cast(tf.shape(self.x_)[0],tf.float32))
             self.accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(self.y_,1), tf.argmax(self.preds,1)), tf.float32), name='accuracy')
-            # Calculate and clip gradients
+            # 2. Calculate and clip gradients
             params = tf.trainable_variables()
             gradients = tf.gradients(self.loss, params)
             clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.configure.max_gradient_norm)
-            # Optimization and Update
-            self.lr = self.configure.learning_rate;
+            # 3. Set learning Rate: Exponential Decay or a constant value
             self.global_step = tf.Variable(0, trainable=False) # global_step just keeps track of the number of batches seen so far
             #self.lr = tf.train.exponential_decay(self.configure.learning_rate, self.global_step, self.configure.max_global_steps_assumed, 0.1)
+            self.lr = self.configure.learning_rate;
+            # 4. Update weights and biases i.e trainable parameters
             self.update_step = tf.train.AdamOptimizer(self.lr).apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
+            #self.update_step = tf.train.RMSPropOptimizer(self.lr).apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
     def make_data_for_batch_training_CNN(self, x_data, y_data): # Inputs:: x_data:[n_samples,n_timesteps,n_features] y_data:[n_samples,n_classes]
         #  Zero Mean Substraction can be performed additionally
         assert(x_data.shape[0]==y_data.shape[0]);
@@ -98,3 +95,10 @@ class CNN_tf(object):
         x_data_new = np.stack(x_data_new);
         y_data_new = np.stack(y_data_new);
         return x_data_new, y_data_new
+    
+#        with tf.variable_scope('multi_dense_layers'):
+#            flat_out_dense_1 = tf.layers.dense(inputs=flat_out, units=256, activation=tf.nn.relu, name='flat_out_dense_1')
+#            flat_out_dense_1 = tf.layers.dropout(flat_out_dense_1, rate=self.configure.dropout_rate_dense, training=self.training, name='flat_out_dense_1_dropout')
+#            flat_out_dense_2 = tf.layers.dense(inputs=flat_out_dense_1, units=64, activation=tf.nn.relu, name='flat_out_dense_2')
+#            flat_out_dense_2 = tf.layers.dropout(flat_out_dense_2, rate=self.configure.dropout_rate_dense, training=self.training, name='flat_out_dense_2_dropout')
+#            self.preds = tf.layers.dense(inputs=flat_out_dense_2, units=self.configure.n_classes, activation=tf.nn.relu, name='predictions')
