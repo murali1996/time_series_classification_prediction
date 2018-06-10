@@ -36,7 +36,7 @@ def regression_error(y_true, y_pred, p=2):
     (Do not use tf.losses, tf.nn, etc.)
     """
     abs_diff = tf.abs(tf.subtract(y_true,y_pred))
-    loss = tf.reduce_mean(tf.pow(abs_diff,p))
+    loss = tf.reduce_mean(tf.pow(abs_diff,p), name='regression_error')
     return loss
 # TODO: hinge loss
 def hinge_loss(y_true, y_pred):
@@ -48,13 +48,12 @@ def hinge_loss(y_true, y_pred):
     # Input: y_true are labels having values 0.0 or 1.0, y_pred are logits or unnormalized predicted class scores
     # Convert labels to +1/-1 floats and multiply with logits
     y_true = 2*y_true-1;
-    loss_ = tf.nn.relu(1-tf.multiply(y_true,y_pred))
+    out_ = 1-tf.multiply(y_true,y_pred)
+    # relu operation #loss_ = tf.nn.relu(1-out_)
+    comparison = tf.less( out_, tf.constant( 0 ) )  
+    loss_ = out_.assign( tf.where (comparison, tf.zeros_like(out_), out_) )
     loss = tf.reduce_mean(loss_);
     return loss
-
-
-
-
 
 
 
