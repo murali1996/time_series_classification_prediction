@@ -40,7 +40,7 @@ for label in range(y.shape[-1]):
             ax[fig_row,fig_col].set_title('{}'.format(row_inds[fig_row*fig_cols+fig_col]));
     for axx in ax.flat: # Hide x labels and tick labels for top plots and y ticks for right plots.
         axx.label_outer()
-    fig.suptitle('Time-Series-Plots @Class_Label:: {}'.format(label))
+    fig.suptitle('Time-Series-Plots (Samples randomly selected from) @Class_Label:: {}'.format(label))
 
 #%% 4. Find (within-class) Pearson Correlation for all classes; without and with time_shifts
 for label in range(y.shape[-1]):
@@ -83,13 +83,29 @@ plt.figure(); plt.scatter(pca_top2[:,0],pca_top2[:,1], s=0.01); plt.title('PCA T
 from sklearn.manifold import TSNE
 tsne = TSNE(n_components=2, perplexity=30, learning_rate=100)
 tsne_dims2 = tsne.fit_transform(x)
-tsne_dims2_c = tsne.fit_transform(x)
+tsne_c = TSNE(n_components=2, perplexity=30, learning_rate=100)
+tsne_dims2_c = tsne_c.fit_transform(x_c)
 plt.figure();
 plt.scatter(tsne_dims2[:,0],tsne_dims2[:,1], s=0.1, c='r'); #plt.title('Clean_Data: TSNE (down-to) 2 Dimensions');
 plt.scatter(tsne_dims2[:,0],tsne_dims2[:,1], s=0.1, c='b'); #plt.title('Corrupt_data: TSNE (down-to) 2 Dimensions');
 plt.show();
 
-#%% 6.1 Mean-Crossing Variations in each class
+#%% 6 FFT on the time-series data
+fft_x = np.abs(np.fft.fft(x,axis=1)); fft_x = fft_x[:,:int(np.ceil(x.shape[1]/2))+1]
+for label in range(y.shape[-1]):
+    labelled = fft_x[np.where(y[:,label]==1)[0],:]
+    fig_rows, fig_cols = 5, 2
+    fig, ax = plt.subplots(fig_rows, fig_cols, figsize=(16, 5))
+    row_inds = np.random.choice(labelled.shape[0],fig_rows*fig_cols,replace=False);
+    for fig_row in range(fig_rows):
+        for fig_col in range(fig_cols):
+            ax[fig_row,fig_col].plot(labelled[row_inds[fig_row*fig_cols+fig_col],:]);
+            ax[fig_row,fig_col].set_title('{}'.format(row_inds[fig_row*fig_cols+fig_col]),y=.93);
+    for axx in ax.flat: # Hide x labels and tick labels for top plots and y ticks for right plots.
+        axx.label_outer()
+    fig.suptitle('Time-Series-FFT-Plots (Samples randomly selected from) @Class_Label:: {}'.format(label))
+
+#%% 7.1 Mean-Crossing Variations in each class
 a = x.copy()-np.mean(x,axis=1).reshape([x.shape[0],1]);
 b = a[:,1:]*a[:,0:-1];
 mean_crossings = np.sum(b>0,axis=1); del a,b;  
@@ -106,7 +122,7 @@ for i, ax in enumerate(ax.flat):
 fig.suptitle('Mean-Crossings'); 
 fig.text(0.5, 0.04, 'mean-crossing magnitudes', ha='center')
 fig.text(0.04, 0.5, 'hist_counts', va='center', rotation='vertical')
-#%% 6.2 Energy Variations in each class
+#%% 7.2 Energy Variations in each class
 enr_ = np.sqrt(np.sum(x*x,axis=1)).reshape([x.shape[0],1]);
 fig_rows, fig_cols = 5, 2
 fig, ax = plt.subplots(fig_rows, fig_cols, figsize=(12, 6))
