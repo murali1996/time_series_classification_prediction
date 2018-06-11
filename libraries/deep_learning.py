@@ -182,7 +182,7 @@ x_c, x_c_len = datasets.data_reader.read_corrupted_dataset(summary=True)
 #%% 2.1.2 Classification using MLP Model
 # Load Model
 from models.ts_classification.ts_mlp import Configure_MLP, MLP_tf
-config_file_path = './logs/ts_classification/mlp_categorical_crossentropy/model_configs'
+config_file_path = './logs/ts_classification/mlp_tf_categorical_crossentropy/model_configs'
 with open(config_file_path, 'rb') as opfile:
     configure = dill.load(opfile)
     opfile.close()
@@ -191,18 +191,23 @@ model = MLP_tf(configure);
 # Make data compatible with the model
   # Data shapes already compatible
 # Infer sample by sample by sending as [batch_size,457] dimensional input because this is MLP and we have to send fixed length
-predictions = [];
-for i in range(x_c.shape[0]):
-    progressBarSimple(i,x_c.shape[0]);
-    result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c[i:i+1,:],model.y_:None})
-    predictions.append(result[0]);
-
-
-
+with tf.Session() as sess:
+    # Restore variables from disk.
+    saver = tf.train.Saver() # To restore Variables and Constants
+    saved_path = os.path.join(configure.model_save_inference, "model.ckpt")
+    saver.restore(sess, saved_path); print("Model restored from path: {}".format(saved_path))
+    predictions = [];
+    for i in range(x_c.shape[0]):
+        progressBarSimple(i,x_c.shape[0]);
+        result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c[i:i+1,:],model.y_:np.zeros([1,10])})
+        predictions.append(result[0]);
+predictions = np.stack(predictions)
+predictions = np.reshape(predictions, [predictions.shape[0],10])
+classes = np.argmax(predictions,axis=1)
 #%% 2.1.2 Classification using RNN Model
 # Load Model
 from models.ts_classification.ts_rnn import Configure_RNN, RNN_tf
-config_file_path = './logs/ts_classification/rnn_categorical_crossentropy/model_configs'
+config_file_path = './logs/ts_classification/rnn_tf_categorical_crossentropy/model_configs'
 with open(config_file_path, 'rb') as opfile:
     configure = dill.load(opfile)
     opfile.close()
