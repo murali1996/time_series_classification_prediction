@@ -4,6 +4,7 @@ Created on Fri Jun  8 18:40:42 2018
 @author: murali.sai
 """
 import tensorflow as tf
+import numpy as np
 
 def categorical_crossentropy(y_true, y_pred):
     loss = tf.nn.softmax_cross_entropy_with_logits(labels=y_true,logits=y_pred)
@@ -49,9 +50,10 @@ def hinge_loss(y_true, y_pred):
     # Convert labels to +1/-1 floats and multiply with logits
     y_true = 2*y_true-1;
     out_ = 1-tf.multiply(y_true,y_pred)
-    # relu operation #loss_ = tf.nn.relu(1-out_)
-    comparison = tf.less( out_, tf.constant( 0 ) )  
-    loss_ = out_.assign( tf.where (comparison, tf.zeros_like(out_), out_) )
+    # relu operation
+    loss_ = tf.clip_by_value(out_,0,np.inf)
+    # comparison = tf.less( out_, tf.constant(0,dtype=tf.float32) ); loss_ = tf.assign(out_, tf.where(comparison, tf.zeros_like(out_), out_) )
+    #loss_ = tf.nn.relu(out_)
     loss = tf.reduce_mean(loss_);
     return loss
 

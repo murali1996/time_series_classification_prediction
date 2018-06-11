@@ -4,10 +4,11 @@ Created on Sat Jun  9 19:58:47 2018
 @author: murali.sai
 ----
 Notes
-RNN for Time-Series Classification using tensorflow library
+MLP for Time-Series Classification using tensorflow library
 ----------
 References
 [0] ...
+[1] ...
 """
 import os, numpy as np
 import tensorflow as tf
@@ -15,16 +16,17 @@ from libraries import losses
 
 class Configure_RNN(object):
     def __init__(self):
-        # 1. Architecture (RNN Layers + Dense Layers)
+        # Architecture (RNN Layers + Dense Layers)
         self.rnn_units, self.state_activation, self.keep_prob_rnn = [128, 128], tf.nn.tanh, 0.8;
         self.dense_layer_units, self.dense_activation, self.dropout_rates = [128, 64], tf.nn.relu, [0.1, 0.1];
         assert(len(self.dense_layer_units)==len(self.dropout_rates))
         self.custom_loss = 'cosine_distance' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
-        # 2. Training and optimization
+        # Training and optimization
         self.batch_size, self.n_timesteps, self.n_features, self.n_classes = 128, 457, 1, 10; # Although n_timesteps will not be used by architecture, it is kept for consistency in code
         self.max_gradient_norm, self.learning_rate = 5, 0.001;
-        self.n_epochs, self.patience = 10, 7; # Patience: epochs (with no loss improvement) until before terminating the training process
-        # 3. Directories, Sub-directories, Paths
+        self.n_epochs, self.patience = 50, 20; # Patience: epochs (with no loss improvement) until before terminating the training process
+    def create_folders_(self):
+        # Directories, Sub-directories, Paths
         self.main_dir = './logs/ts_classification';
         self.model_dir = os.path.join(self.main_dir, 'rnn_tf_'+self.custom_loss);
         self.model_save_training = os.path.join(self.model_dir, 'train_best')
@@ -32,7 +34,6 @@ class Configure_RNN(object):
         self.tf_logs = os.path.join(self.model_dir, 'tf_logs');
         self.images = os.path.join(self.model_dir, 'images');
         self.configure_save_path = os.path.join(self.model_dir,'model_configs');
-    def create_folders_(self):
         dirs = [self.main_dir, self.model_dir, self.model_save_training, self.model_save_inference, self.tf_logs, self.images]
         for dir_ in dirs:
             if not os.path.exists(dir_):
@@ -56,7 +57,7 @@ class RNN_tf(object):
                 rnn_stack_backward = tf.nn.rnn_cell.MultiRNNCell(rnn_cells_backward)
                 #rnn_stack_backward = tf.contrib.rnn.DropoutWrapper(rnn_stack_backward, output_keep_prob=self.configure.keep_prob_rnn)
                 outputs_backward, state_backward = tf.nn.dynamic_rnn(rnn_stack_backward, x_backward_, dtype = tf.float32)
-            self.output = tf.concat([outputs_forward[:,-1,:],outputs_backward[:,-1,:]],axis=-1) # [batch_size,2*self.configure.rnn_units[-1]]      
+            self.output = tf.concat([outputs_forward[:,-1,:],outputs_backward[:,-1,:]],axis=-1) # [batch_size,2*self.configure.rnn_units[-1]]
         output_ = self.output;
         with tf.variable_scope('multi_dense_layers'):
             for i, units in enumerate(self.configure.dense_layer_units):
@@ -82,7 +83,9 @@ class RNN_tf(object):
         return tf.Variable(tf.truncated_normal(shape, stddev = 0.1),name=name)
     def init_bias(self, shape, name):
         return tf.Variable(tf.constant(0.0, shape = shape),name=name)
-    def make_data_for_batch_training_RNN(self, x_data, y_data): # Inputs:: x_data:[n_samples,n_timesteps,n_features] y_data:[n_samples,n_classes]
+    def make_data_for_batch_training_RNN(self, x_data, y_data):
+        # Inputs:: x_data:[n_samples,n_timesteps,n_features] y_data:[n_samples,n_classes]
+        # Outputs:: x_data_new:[n_batches,batch_size,n_timesteps,n_features] y_data_new:[n_batches,batch_size,n_classes]
         assert(x_data.shape[0]==y_data.shape[0]);
         n_rows = x_data.shape[0];
         x_data_new, y_data_new = [], [];
@@ -95,7 +98,7 @@ class RNN_tf(object):
         x_data_new = np.stack(x_data_new);
         y_data_new = np.stack(y_data_new);
         return x_data_new, y_data_new
-    
+
 #        with tf.variable_scope('multi_dense_layers'):
 #            self.weights = {'w_1':self.init_weights([2*self.configure.rnn_units[-1],256],'w_1'),
 #                            'w_2':self.init_weights([256,64],'w_2'),

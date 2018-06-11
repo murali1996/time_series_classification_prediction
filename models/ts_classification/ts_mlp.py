@@ -8,6 +8,7 @@ MLP for Time-Series Classification using tensorflow library
 ----------
 References
 [0] ...
+[1] ...
 """
 import os, numpy as np
 import tensorflow as tf
@@ -15,16 +16,16 @@ from libraries import losses
 
 class Configure_MLP(object):
     def __init__(self):
-        # 1. Architecture (Dense layers)
-        self.dense_layer_units, self.dense_activation, self.dropout_rates = [256, 128, 64], tf.nn.relu, [0.0, 0.2, 0.1];
+        # Architecture (Dense layers)
+        self.dense_layer_units, self.dense_activation, self.dropout_rates = [256, 128, 64, 32], tf.nn.relu, [0.2, 0.2, 0.1, 0.1];
         assert(len(self.dense_layer_units)==len(self.dropout_rates))
         self.custom_loss = 'cosine_distance' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
-        # 2. Training and optimization
+        # Training and optimization
         self.batch_size, self.n_timesteps, self.n_features, self.n_classes = 128, 457, 1, 10; # Although n_features will not be used by architecture, it is kept for consistency in code
         self.max_gradient_norm, self.learning_rate = 5, 0.001;
-        self.n_epochs = 10;
-        self.patience = 7; # epochs until before terminating the training process
-        # 3. Directories, Sub-directories, Paths
+        self.n_epochs, self.patience = 200, 50; # Patience: epochs (with no loss improvement) until before terminating the training process
+    def create_folders_(self):
+        # Directories, Sub-directories, Paths
         self.main_dir = './logs/ts_classification';
         self.model_dir = os.path.join(self.main_dir, 'mlp_tf_'+self.custom_loss);
         self.model_save_training = os.path.join(self.model_dir, 'train_best')
@@ -32,7 +33,6 @@ class Configure_MLP(object):
         self.tf_logs = os.path.join(self.model_dir, 'tf_logs');
         self.images = os.path.join(self.model_dir, 'images');
         self.configure_save_path = os.path.join(self.model_dir,'model_configs');
-    def create_folders_(self):
         dirs = [self.main_dir, self.model_dir, self.model_save_training, self.model_save_inference, self.tf_logs, self.images]
         for dir_ in dirs:
             if not os.path.exists(dir_):
@@ -44,7 +44,7 @@ class MLP_tf(object):
             self.training = tf.placeholder(tf.bool) # True: training phase, False: testing/inference phase
             self.x_ = tf.placeholder(tf.float32, shape=[None,self.configure.n_timesteps]) # [batch_size,n_timesteps]
             self.y_ = tf.placeholder(tf.float32, shape=[None,self.configure.n_classes]) # [batch_size,n_classes]
-        output_ = self.x_; 
+        output_ = self.x_;
         with tf.variable_scope('multi_dense_layers'):
             for i, units in enumerate(self.configure.dense_layer_units):
                 output_ = tf.layers.dense(inputs=output_, units=units, activation=self.configure.dense_activation, name='dense_{}'.format(i))
@@ -65,7 +65,9 @@ class MLP_tf(object):
             # 4. Update weights and biases i.e trainable parameters
             self.update_step = tf.train.AdamOptimizer(self.lr).apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
             #self.update_step = tf.train.RMSPropOptimizer(self.lr).apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
-    def make_data_for_batch_training_MLP(self, x_data, y_data): # Inputs:: x_data:[n_samples,n_timesteps] y_data:[n_samples,n_classes]
+    def make_data_for_batch_training_MLP(self, x_data, y_data):
+        # Inputs:: x_data:[n_samples,n_timesteps] y_data:[n_samples,n_classes]
+        # Outputs:: x_data_new:[n_batches,batch_size,n_timesteps] y_data_new:[n_batches,batch_size,n_classes]
         assert(x_data.shape[0]==y_data.shape[0]);
         n_rows = x_data.shape[0];
         x_data_new, y_data_new = [], [];
