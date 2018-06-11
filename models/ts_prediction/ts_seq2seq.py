@@ -4,7 +4,7 @@ Created on Sat Jun  9 19:58:47 2018
 @author: murali.sai
 ----
 Notes
-CNN for Time-Series Classification using tensorflow library
+Seq2Seq for Time-Series Prediction using tensorflow library
 ----------
 References
 [0] ...

@@ -4,7 +4,7 @@ Created on Sat Jun  9 19:58:47 2018
 @author: murali.sai
 ----
 Notes
-MLP for Time-Series Classification using tensorflow library
+RNN for Time-Series Classification using tensorflow library
 ----------
 References
 [0] ...
