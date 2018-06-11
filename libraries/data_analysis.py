@@ -12,7 +12,8 @@ from matplotlib import pyplot as plt
 x, y_labels = datasets.data_reader.read_clean_dataset(summary=True)
 y = datasets.data_reader.one_hot(y_labels)
 x_train, y_train, x_test, y_test = train_test_split(x, y)
-
+#%% Load corrupted dataset
+x_c, x_c_len = datasets.data_reader.read_corrupted_dataset(summary=True)
 #%% 1. Checking the Shapes and the range of values
 assert(x.shape[0]==y.shape[0])
 for data in [x_train, y_train, x_test, y_test]:
@@ -82,7 +83,11 @@ plt.figure(); plt.scatter(pca_top2[:,0],pca_top2[:,1], s=0.01); plt.title('PCA T
 from sklearn.manifold import TSNE
 tsne = TSNE(n_components=2, perplexity=30, learning_rate=100)
 tsne_dims2 = tsne.fit_transform(x)
-plt.figure(); plt.scatter(tsne_dims2[:,0],tsne_dims2[:,1], s=0.1); plt.title('TSNE (down-to) 2 Dimensions')
+tsne_dims2_c = tsne.fit_transform(x)
+plt.figure();
+plt.scatter(tsne_dims2[:,0],tsne_dims2[:,1], s=0.1, c='r'); #plt.title('Clean_Data: TSNE (down-to) 2 Dimensions');
+plt.scatter(tsne_dims2[:,0],tsne_dims2[:,1], s=0.1, c='b'); #plt.title('Corrupt_data: TSNE (down-to) 2 Dimensions');
+plt.show();
 
 #%% 6.1 Mean-Crossing Variations in each class
 a = x.copy()-np.mean(x,axis=1).reshape([x.shape[0],1]);
