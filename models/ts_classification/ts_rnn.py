@@ -33,7 +33,7 @@ class Configure_RNN(object):
         self.images = os.path.join(self.model_dir, 'images');
         self.configure_save_path = os.path.join(self.model_dir,'model_configs');
     def create_folders_(self):
-        dirs = [self.mmain_dir, self.model_dir, self.model_save_training, self.model_save_inference, self.tf_logs, self.images]
+        dirs = [self.main_dir, self.model_dir, self.model_save_training, self.model_save_inference, self.tf_logs, self.images]
         for dir_ in dirs:
             if not os.path.exists(dir_):
                 os.mkdir(dir_)
