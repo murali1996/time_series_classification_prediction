@@ -12,9 +12,13 @@ from libraries import losses
 class Configure_CNN(object):
     def __init__(self):
         # Architecture (CNNlayers + Dense layers)
-        self.dense_layer_units, self.dense_activation, self.dropout_rates = [256, 64], tf.nn.relu, [0.2, 0.0];
+        self.dense_layer_units, self.dense_activation, self.last_activation, self.dropout_rates = [256, 64], tf.nn.relu, tf.nn.relu, [0.25, 0.125];
         assert(len(self.dense_layer_units)==len(self.dropout_rates))
-        self.custom_loss = 'cosine_distance' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
+        self.custom_loss = 'categorical_crossentropy' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
+        if self.custom_loss=='categorical_crossentropy':
+            self.last_activation = tf.nn.relu;
+        elif self.custom_loss=='cosine_distance' or self.custom_loss=='regression_error':
+            self.last_activation = tf.nn.sigmoid;
         # Training and optimization
         self.batch_size, self.n_timesteps, self.n_features, self.n_classes = 128, 457, 1, 10;
         self.max_gradient_norm, self.learning_rate = 5, 0.001;
@@ -55,13 +59,13 @@ class CNN_tf(object):
             out_2 = tf.concat([out_2_1,out_2_2,out_2_3], axis=-1, name='out_2') # [batch_size, 229, 18]
             max_pool_2 = tf.layers.max_pooling1d(inputs=out_2, pool_size=2, strides=2, padding='same', name='max_pool_1') # [batch_size, 115, 18]
         with tf.variable_scope('flatten_layer'):
-            flat_out = tf.reshape(max_pool_2, (-1,115*18), name='flat_out') # Along each batch # [batch_size, 115*18]
+            flat_out = tf.layers.Flatten(name='flat_out')(max_pool_2) # Along each batch # [batch_size, 115*18]
         output_ = flat_out;
         with tf.variable_scope('multi_dense_layers'):
             for i, units in enumerate(self.configure.dense_layer_units):
                 output_ = tf.layers.dense(inputs=output_, units=units, activation=self.configure.dense_activation, name='dense_{}'.format(i))
                 output_ = tf.layers.dropout(output_, rate=self.configure.dropout_rates[i], training=self.training, name='dropout_{}'.format(i))
-            self.preds = tf.layers.dense(inputs=output_, units=self.configure.n_classes, activation=self.configure.dense_activation, name='predictions')
+            self.preds = tf.layers.dense(inputs=output_, units=self.configure.n_classes, activation=self.configure.last_activation, name='predictions')
         with tf.variable_scope('loss_and_optimizer'):
             # 1. Loss function
             self.loss = (tf.reduce_sum(getattr(losses, self.configure.custom_loss)(self.y_,self.preds))/tf.cast(tf.shape(self.x_)[0],tf.float32))

@@ -11,14 +11,14 @@ from matplotlib import pyplot as plt
 #%% MAIN
 
 if __name__=="__main__":
-    
+
     #%% Load clean data
     x, y_labels = datasets.data_reader.read_clean_dataset(summary=True)
     y = datasets.data_reader.one_hot(y_labels)
     x_train, y_train, x_test, y_test = train_test_split(x, y)
     #%% Load corrupted dataset
     x_c, x_c_len = datasets.data_reader.read_corrupted_dataset(summary=True)
-    
+
     #%% 1. Checking the Shapes and the range of values
     assert(x.shape[0]==y.shape[0])
     for data in [x_train, y_train, x_test, y_test]:

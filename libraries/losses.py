@@ -51,8 +51,8 @@ def hinge_loss(y_true, y_pred):
     out_ = 1-tf.multiply(y_true,y_pred)
     # relu operation
     loss_ = tf.clip_by_value(out_,0,np.inf)
-    # comparison = tf.less( out_, tf.constant(0,dtype=tf.float32) ); loss_ = tf.assign(out_, tf.where(comparison, tf.zeros_like(out_), out_) )
-    #loss_ = tf.nn.relu(out_)
+    # Or... comparison = tf.less( out_, tf.constant(0,dtype=tf.float32) ); loss_ = tf.assign(out_, tf.where(comparison, tf.zeros_like(out_), out_) )
+    # Or... loss_ = tf.nn.relu(out_)
     loss = tf.reduce_mean(loss_);
     return loss
 

@@ -20,7 +20,7 @@ class Configure_Seq2Seq(object):
         # Training and optimization
         self.batch_size, self.timesteps, self.future_time_steps, self.n_features, self.n_classes = 128, 125, 25, 1, 10; # n_timesteps=future+past
         assert(self.timesteps > self.future_time_steps)
-        self.max_gradient_norm, self.learning_rate = 5, 0.001;
+        self.max_gradient_norm, self.learning_rate = 5, 0.0005;
         self.n_epochs, self.patience = 200, 50; # epochs until before terminating the training process
         self.scheduled_training_linear, self.sc_tr_unity_epoch = True, 50;
         assert(self.sc_tr_unity_epoch>=2);
@@ -85,12 +85,13 @@ class Seq2Seq_tf(object):
                 curr_state = decoder_init_state if j==0 else curr_state;
                 output, curr_state = rnn_stack_decoder(curr_input, curr_state)
                 curr_pred_ = tf.add(tf.matmul(output, self.weights['w_3']), self.bias['b_3'], name='curr_pred_')
-                curr_pred_ = tf.layers.dropout(curr_pred_, rate=0.1, training=self.training, name='dropout_curr_pred_')
-                curr_pred = tf.add(tf.matmul(curr_pred_, self.weights['w_4']), self.bias['b_4'])
-                self.preds = tf.expand_dims(curr_pred, axis=1) if j==0 else tf.concat([self.preds, tf.expand_dims(curr_pred, axis=1)], axis=1);
+                dropout_curr_pred_ = tf.layers.dropout(curr_pred_, rate=0.1, training=self.training, name='dropout_curr_pred_')
+                curr_pred = tf.add(tf.matmul(dropout_curr_pred_, self.weights['w_4']), self.bias['b_4'])
+                activation_curr_pred = tf.sigmoid(curr_pred, name='activation_curr_pred')
+                self.preds = tf.expand_dims(activation_curr_pred, axis=1) if j==0 else tf.concat([self.preds, tf.expand_dims(activation_curr_pred, axis=1)], axis=1);
         with tf.variable_scope('loss_and_optimizer'):
             # 1. Loss function
-            self.loss = (tf.reduce_sum(getattr(losses, self.configure.custom_loss)(self.y_,self.preds))/tf.cast(tf.shape(self.x_)[0],tf.float32))
+            self.loss = (tf.reduce_sum(getattr(losses, self.configure.custom_loss)(self.x_pred_,self.preds))/tf.cast(tf.shape(self.x_)[0],tf.float32))
             # 2. Calculate and clip gradients
             params = tf.trainable_variables()
             gradients = tf.gradients(self.loss, params)

@@ -6,7 +6,6 @@ Notes
 Viewed best in spyder
 ---
 """
-
 #%% Libraries
 # Custom
 import datasets.data_reader
@@ -15,12 +14,8 @@ from libraries.helpers import train_test_split, progressBar, progressBarSimple
 import numpy as np, os, dill
 from matplotlib import pyplot as plt
 import tensorflow as tf
-#from keras.models import Sequential
-#from keras.layers import Dense, Activation, Reshape, Flatten, Input
-#from keras.layers import Conv1D, MaxPooling1D
-#from keras.layers import BatchNormalization, Dropout
-#from keras.layers import LSTM, GRU, Masking
-#from keras.optimizers import SGD, RMSprop, Adam
+
+
 
 #%% PART 1
 # TODO:
@@ -45,7 +40,7 @@ from libraries import losses # Please check the file for further details
 from models.ts_classification.ts_mlp import Configure_MLP, MLP_tf
 # Create Model/ Load Model
 configure = Configure_MLP();
-configure.custom_loss = 'cosine_distance' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
+configure.custom_loss = 'categorical_crossentropy' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
 configure.create_folders_();
 model = MLP_tf(configure);
 # Make data compatible with the architecture defined; function available in model class itself
@@ -56,7 +51,7 @@ x_test_, y_test_ = model.make_data_for_batch_training_MLP(x_test_, y_test)
 from models.ts_classification.ts_rnn import Configure_RNN, RNN_tf
 # Create Model/ Load Model
 configure = Configure_RNN();
-configure.custom_loss = 'categorical_crossentropy' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
+configure.custom_loss = 'cosine_distance' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
 configure.create_folders_();
 model = RNN_tf(configure);
 # Make data compatible with the architecture defined; function available in model class itself
@@ -67,7 +62,7 @@ x_test_, y_test_ = model.make_data_for_batch_training_RNN(x_test_, y_test)
 from models.ts_classification.ts_cnn import Configure_CNN, CNN_tf
 # Create Model/ Load Model
 configure = Configure_CNN();
-configure.custom_loss = 'cosine_distance' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
+configure.custom_loss = 'categorical_crossentropy' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
 configure.create_folders_();
 model = CNN_tf(configure);
 # Make data compatible with the architecture defined; function available in model class itself
@@ -80,7 +75,6 @@ Notes
 1. Parameters such as no. of units in dense layers/rnn cells, learning rate, n_epochs, patience, etc.
    can be easily modified by setting them through model.configure.*
    For ease of implementation, all such parameters are pre-set in the respective configure files
-2. It is preferable to use model.configure.dense_activation as tf.nn.tanh instead of tf.nn.relu when using 'hinge_loss'
 '''
 # Set Configuration
 model.configure.batch_size = 128;
@@ -167,7 +161,7 @@ ax[0].legend(); ax[0].set_xlabel('EPOCHS'); ax[0].set_ylabel('LOSS'); ax[0].set_
 ax[1].plot(range(len(train_acc_)), train_acc_, 'b', label='train_acc_')
 ax[1].plot(range(len(test_acc_)), test_acc_, 'r', label='test_acc_')
 ax[1].legend(); ax[1].set_xlabel('EPOCHS'); ax[1].set_ylabel('ACCURACY'); ax[1].set_title('TRAIN vs TEST ACC'); ax[1].grid();
-fig.suptitle('model: {}; loss: {}'.format('cnn_tf',model.configure.custom_loss))
+fig.suptitle('model: {}; loss: {}'.format(model.__class__.__name__,model.configure.custom_loss))
 # Save current python environment variables for future references
 # <...>
 
@@ -192,6 +186,7 @@ x_c, x_c_len = datasets.data_reader.read_corrupted_dataset(summary=True)
 #%% 2.1 Classify each sample in x_c
 #%% 2.1.2 Classification using MLP Model
 # Load Model
+tf.reset_default_graph();
 from models.ts_classification.ts_mlp import Configure_MLP, MLP_tf
 config_file_path = './logs/ts_classification/mlp_tf_categorical_crossentropy/model_configs'
 with open(config_file_path, 'rb') as opfile:
@@ -212,11 +207,15 @@ with tf.Session() as sess:
         progressBarSimple(i,x_c.shape[0]);
         result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c[i:i+1,:],model.y_:np.zeros([1,10])})
         predictions.append(result[0]);
-predictions = np.stack(predictions)
-predictions = np.reshape(predictions, [predictions.shape[0],10])
-classes = np.argmax(predictions,axis=1)
+predictions_MLP = np.stack(predictions)
+predictions_MLP = np.reshape(predictions_MLP, [predictions_MLP.shape[0],predictions_MLP.shape[-1]])
+if model.configure.custom_loss=='categorical_crossentropy':
+    a = np.exp(predictions_MLP - np.max(predictions_MLP,axis=1).reshape([predictions_MLP.shape[0],1]))
+    b = a/np.sum(a,axis=1).reshape([predictions_MLP.shape[0],1])
+    predictions_MLP = b;
 #%% 2.1.2 Classification using RNN Model
 # Load Model
+tf.reset_default_graph();
 from models.ts_classification.ts_rnn import Configure_RNN, RNN_tf
 config_file_path = './logs/ts_classification/rnn_tf_categorical_crossentropy/model_configs'
 with open(config_file_path, 'rb') as opfile:
@@ -235,13 +234,17 @@ with tf.Session() as sess:
     predictions = [];
     for i in range(x_c.shape[0]):
         progressBarSimple(i,x_c.shape[0]);
-        result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,x_c_len[i],:],model.y_:None})
+        result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,:x_c_len[i],:],model.y_:np.zeros([1,10])})
         predictions.append(result[0]);
-predictions = np.stack(predictions)
-predictions = np.reshape(predictions, [predictions.shape[0],10])
-classes = np.argmax(predictions,axis=1)
+predictions_RNN = np.stack(predictions)
+predictions_RNN = np.reshape(predictions_RNN, [predictions_RNN.shape[0],predictions_RNN.shape[-1]])
+if model.configure.custom_loss=='categorical_crossentropy':
+    a = np.exp(predictions_RNN - np.max(predictions_RNN,axis=1).reshape([predictions_RNN.shape[0],1]))
+    b = a/np.sum(a,axis=1).reshape([predictions_RNN.shape[0],1])
+    predictions_RNN = b;
 #%% 2.1.3 Classification using CNN Model
 # Load Model
+tf.reset_default_graph();
 from models.ts_classification.ts_cnn import Configure_CNN, CNN_tf
 config_file_path = './logs/ts_classification/cnn_tf_cosine_distance/model_configs'
 with open(config_file_path, 'rb') as opfile:
@@ -260,12 +263,18 @@ with tf.Session() as sess:
     predictions = [];
     for i in range(x_c.shape[0]):
         progressBarSimple(i,x_c.shape[0]);
-        result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,x_c_len[i],:],model.y_:None})
+        result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,:,:],model.y_:np.zeros([1,10])})
         predictions.append(result[0]);
-predictions = np.stack(predictions)
-predictions = np.reshape(predictions, [predictions.shape[0],10])
-classes = np.argmax(predictions,axis=1)
-#%% Save as npz
+predictions_CNN = np.stack(predictions)
+predictions_CNN = np.reshape(predictions_CNN, [predictions_CNN.shape[0],predictions_CNN.shape[-1]])
+if model.configure.custom_loss=='categorical_crossentropy':
+    a = np.exp(predictions_CNN - np.max(predictions_CNN,axis=1).reshape([predictions_CNN.shape[0],1]))
+    b = a/np.sum(a,axis=1).reshape([predictions_CNN.shape[0],1])
+    predictions_CNN = b;
+#%% 2.1.4 Get class labels and save them as npz
+# Additionally, ensemble result is done with weights to MLP,RNN,CNN as 0.1,0.6,0.3 respectively
+final_predictions = 0.1*predictions_MLP + 0.8*predictions_RNN + 0.1*predictions_CNN;
+classes = np.argmax(final_predictions,axis=1)
 np.savez('corrupt_labels.npz', classes);
 
 
@@ -281,8 +290,9 @@ np.savez('corrupt_labels.npz', classes);
 #    With your submission, include the results as a shape = (30000,25)
 #    Numpy array named corrupt_prediction.npz.
 '''
-A generic model has been developed for all classes to predict the next 25 samples. A more effective way would be to train individual model per class
-Seq2Seq Learning with scheduled training has been used in prediction
+-A generic model has been developed for all classes to predict the next 25 samples. More details are avaialable in readme.
+-A more effective way would be to train individual model per class
+-Seq2Seq Learning with scheduled training has been used in prediction
 '''
 #%% 3.0.1 Load clean data
 x, y_labels = datasets.data_reader.read_clean_dataset(summary=True)
@@ -290,13 +300,17 @@ y = datasets.data_reader.one_hot(y_labels)
 x_train, y_train, x_test, y_test = train_test_split(x, y)
 #%% 3.0.2 Some Data Analysis on clean data
  # from libraries import data_analysis # Please check the file for further details
-#%% 3.1 Training Model for time-series prediction using Seq2Seq RNN Model with Scheduled Training
+#%% 3.1.1 Training Model for time-series prediction using Seq2Seq RNN Model with Scheduled Training
 from models.ts_prediction.ts_seq2seq import Configure_Seq2Seq, Seq2Seq_tf
 # Create Model/ Load Model
 configure = Configure_Seq2Seq();
 configure.custom_loss = 'regression_error' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
 configure.create_folders_();
 model = Seq2Seq_tf(configure);
+# Save current configuration
+with open(model.configure.configure_save_path, 'wb') as opfile:
+    dill.dump(configure, opfile)
+    opfile.close()
 # Training and inference
 generate_new_data_every, test_every, start_epoch = 100, 1, 0; # Define when to do testing and also set the starting epoch
 if start_epoch==0: # Useful when restarting the training from an earlier stopped training phase
@@ -319,8 +333,8 @@ with tf.Session() as sess:
         print('\n');print('EPOCH: {}'.format(epoch));
         if epoch%generate_new_data_every==0:
             # Make data compatible with the architecture defined; function available in model class itself
-            x_train_, x_train_pred_ = model.make_data_for_seq2seq(np.expand_dims(x_train,axis=-1));
-            x_test_, x_test_pred_ = model.make_data_for_seq2seq(np.expand_dims(x_test,axis=-1));
+            x_train_, x_train_pred_ = model.make_data_for_batch_training_seq2seq(np.expand_dims(x_train,axis=-1));
+            x_test_, x_test_pred_ = model.make_data_for_batch_training_seq2seq(np.expand_dims(x_test,axis=-1));
         reuse_predictions_probability = np.min([1,(epoch)/np.min([model.configure.sc_tr_unity_epoch,configure.n_epochs])]) if model.configure.scheduled_training_linear else 0
         # Training
         train_loss = 0;
@@ -370,34 +384,58 @@ with tf.Session() as sess:
 train_loss_, test_loss_ = np.stack(train_loss_), np.stack(test_loss_);
 # Plot results
 fig, ax = plt.subplots(1,1)
-ax[0].plot(range(len(train_loss_)), train_loss_, 'b', label='train_loss_')
-ax[0].plot(range(len(test_loss_)), test_loss_, 'r', label='test_loss_')
-ax[0].legend(); ax[0].set_xlabel('EPOCHS'); ax[0].set_ylabel('LOSS'); ax[0].set_title('TRAIN vs TEST LOSS'); ax[0].grid();
+ax.plot(range(len(train_loss_)), train_loss_, 'b', label='train_loss_')
+ax.plot(range(len(test_loss_)), test_loss_, 'r', label='test_loss_')
+ax.legend(); ax.set_xlabel('EPOCHS'); ax.set_ylabel('LOSS'); ax.set_title('TRAIN vs TEST LOSS'); ax.grid();
 fig.suptitle('model: {}; loss: {}'.format('seq2seq_tf',model.configure.custom_loss))
 # Save current python environment variables for future references
 # <...>
 #%% 3.2 Predict next 25 samples for each given sample in x_c
+tf.reset_default_graph();
 # Load Model
 from models.ts_prediction.ts_seq2seq import Configure_Seq2Seq, Seq2Seq_tf
 config_file_path = './logs/ts_prediction/seq2seq_tf_regression_error/model_configs'
 with open(config_file_path, 'rb') as opfile:
     configure = dill.load(opfile)
     opfile.close()
-print(configure.custom_loss);
+print('Loss in the configuration: {}'.format(configure.custom_loss));
 model = Seq2Seq_tf(configure);
+# Load Data
+x_c, x_c_len = datasets.data_reader.read_corrupted_dataset(summary=False)
 # Make data compatible with the model
 x_c_expanded = np.expand_dims(x_c,axis=-1)
-# Infer sample by sample by sending as [1,x_c_len,1] dimensional input because this is RNN and we have variable lengths
+past_time_steps = model.configure.timesteps-model.configure.future_time_steps;
+x_c_expanded_last = np.zeros([x_c_expanded.shape[0],past_time_steps,1]);
+for i in range(x_c_expanded_last.shape[0]):
+    x_c_expanded_last[i,:,:] = x_c_expanded[i:i+1,x_c_len[i]-past_time_steps:x_c_len[i],:];
+# Split the dataset into batches of size 128
+n_rows = x_c_expanded_last.shape[0];
+x_c_expanded_last_batches_ = [];
+for i in np.arange(0,n_rows-n_rows%model.configure.batch_size,model.configure.batch_size):
+    x_c_expanded_last_batches_.append(x_c_expanded_last[i:i+model.configure.batch_size,:,:])
+if n_rows%model.configure.batch_size!=0: # Implies left over samples must be added into a last batch
+    x_c_expanded_last_batches_.append(x_c_expanded_last[-model.configure.batch_size:,:,:])
+x_c_expanded_last_batches_ = np.stack(x_c_expanded_last_batches_);
+# Inference step
 with tf.Session() as sess:
     # Restore variables from disk.
     saver = tf.train.Saver() # To restore Variables and Constants
-    saved_path = os.path.join(configure.model_save_inference, "model.ckpt")
+    saved_path = os.path.join(model.configure.model_save_inference, "model.ckpt")
     saver.restore(sess, saved_path); print("Model restored from path: {}".format(saved_path))
     predictions = [];
-    for i in range(x_c.shape[0]):
-        progressBarSimple(i,x_c.shape[0]);
-        result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,x_c_len[i],:],model.y_:None})
-        predictions.append(result[0]); # result[0] will be of size [1,25,1]
-predictions = np.vstack(predictions) # [30000,25,1]
-predictions = np.reshape(predictions, [predictions.shape[0],25]); #[30000,25]
+    for i in range(x_c_expanded_last_batches_.shape[0]):
+        progressBarSimple(i,x_c_expanded_last_batches_.shape[0]);
+        result = sess.run([model.output,model.preds],
+                          feed_dict={model.training:False,
+                                     model.x_:x_c_expanded_last_batches_[i], #[:128,:100,:], #x_c_expanded[i:i+1,x_c_len[i]-100:x_c_len[i],:],
+                                     model.x_pred_:x_c_expanded_last_batches_[i,:,-25:,:], #x_c_expanded_last[:128,:25,:], #x_c_expanded[i:i+1,-25:,:],
+                                     model.reuse_predictions_probability:1})
+        predictions.append(result[1]); # result[1] will be of size [1,25,1]
+predictions = np.vstack(predictions) # [>=30000,25,1]
+predictions = np.reshape(predictions, [predictions.shape[0],predictions.shape[1]]); #[>=30000,25]
+# Reduce the predictions and x_c_expanded_last_batches_ to size 30000
+x_c_expanded_last_batches_ = np.vstack(x_c_expanded_last_batches_);
+x_c_expanded_last_batches_ = np.reshape(x_c_expanded_last_batches_, [x_c_expanded_last_batches_.shape[0],x_c_expanded_last_batches_.shape[1]]);
+predictions = np.delete(predictions,np.arange(n_rows-(model.configure.batch_size-n_rows%model.configure.batch_size),n_rows),0);
+x_c_expanded_last_batches_ = np.delete(x_c_expanded_last_batches_,np.arange(n_rows-(model.configure.batch_size-n_rows%model.configure.batch_size),n_rows),0);
 np.savez('corrupt_prediction.npz', predictions);
