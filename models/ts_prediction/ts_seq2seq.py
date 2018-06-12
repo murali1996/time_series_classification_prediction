@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Jun  9 19:58:47 2018
 @author: murali.sai
 ----
 Notes
 Seq2Seq for Time-Series Prediction using tensorflow library
-----------
-References
-[0] ...
 """
 import os, numpy as np
 import tensorflow as tf
@@ -15,20 +11,21 @@ from libraries import losses
 
 class Configure_Seq2Seq(object):
     def __init__(self):
-        # 1. Architecture (Seq2Seq: RNN_Layers_Encoder+RNN_Layers_Decoder+Dense Layers)
+        #  Architecture (Seq2Seq: RNN_Layers_Encoder+RNN_Layers_Decoder+Dense Layers)
         self.rnn_units, self.state_activation, self.keep_prob = [128, 128], tf.nn.tanh, 0.8;
         assert(np.any(np.array(self.rnn_units)-self.rnn_units[0])==False) #All values must be equal in current architecture
         #self.dense_layer_units, self.dense_activation, self.dropout_rates = [128,], tf.nn.relu, [0.1,];
         #assert(len(self.dense_layer_units)==len(self.dropout_rates))
         self.custom_loss = 'regression_error' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
-        # 2. Training and optimization
+        # Training and optimization
         self.batch_size, self.timesteps, self.future_time_steps, self.n_features, self.n_classes = 128, 125, 25, 1, 10; # n_timesteps=future+past
         assert(self.timesteps > self.future_time_steps)
         self.max_gradient_norm, self.learning_rate = 5, 0.001;
         self.n_epochs, self.patience = 200, 50; # epochs until before terminating the training process
         self.scheduled_training_linear, self.sc_tr_unity_epoch = True, 50;
         assert(self.sc_tr_unity_epoch>=2);
-        # 3. Directories, Sub-directories, Paths
+    def create_folders_(self):
+        # Directories, Sub-directories, Paths
         self.main_dir = './logs/ts_prediction';
         self.model_dir = os.path.join(self.main_dir, 'seq2seq_tf_'+self.custom_loss);
         self.model_save_training = os.path.join(self.model_dir, 'train_best')
@@ -36,7 +33,6 @@ class Configure_Seq2Seq(object):
         self.tf_logs = os.path.join(self.model_dir, 'tf_logs');
         self.images = os.path.join(self.model_dir, 'images');
         self.configure_save_path = os.path.join(self.model_dir,'model_configs');
-    def create_folders_(self):
         dirs = [self.main_dir, self.model_dir, self.model_save_training, self.model_save_inference, self.tf_logs, self.images]
         for dir_ in dirs:
             if not os.path.exists(dir_):
@@ -95,7 +91,6 @@ class Seq2Seq_tf(object):
         with tf.variable_scope('loss_and_optimizer'):
             # 1. Loss function
             self.loss = (tf.reduce_sum(getattr(losses, self.configure.custom_loss)(self.y_,self.preds))/tf.cast(tf.shape(self.x_)[0],tf.float32))
-            self.accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(self.y_,1), tf.argmax(self.preds,1)), tf.float32), name='accuracy')
             # 2. Calculate and clip gradients
             params = tf.trainable_variables()
             gradients = tf.gradients(self.loss, params)
@@ -111,8 +106,10 @@ class Seq2Seq_tf(object):
         return tf.Variable(tf.truncated_normal(shape, stddev = 0.1),name=name)
     def init_bias(self, shape, name):
         return tf.Variable(tf.constant(0.0, shape = shape),name=name)
-    def make_data_for_batch_training_seq2seq(self, x_data): # Input SHAPES:: x_data:[n_samples,n_timesteps,n_features] #n_timesteps=457 in given data
-        #x_data:[n_samples,n_timesteps,n_features]-->[n_samples,timesteps,n_features]
+    def make_data_for_batch_training_seq2seq(self, x_data):
+        # Input SHAPES:: x_data:[n_samples,n_timesteps,n_features] #n_timesteps=457 in given data
+        # x_data:[n_samples,n_timesteps,n_features]
+        #               -->[n_batches,batch_size,timesteps,n_features],[n_batches,batch_size,future_time_steps,n_features]
         x_data_modified = np.zeros([x_data.shape[0],self.configure.timesteps,x_data.shape[-1]]);
         for i in range(x_data.shape[0]):
             rand_index = np.random.randint(0,x_data.shape[1]-self.configure.timesteps,1)[0]

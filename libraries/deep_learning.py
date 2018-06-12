@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jun  8 18:38:56 2018
 @author: murali.sai
+---
+Notes
+Viewed best in spyder
+---
 """
+
 #%% Libraries
 # Custom
 import datasets.data_reader
@@ -33,7 +37,7 @@ import tensorflow as tf
 x, y_labels = datasets.data_reader.read_clean_dataset(summary=True)
 y = datasets.data_reader.one_hot(y_labels)
 x_train, y_train, x_test, y_test = train_test_split(x, y)
-#%% Some Data Analysis on clean data
+#%% 1.0.2 Some Data Analysis on clean data
 from libraries import data_analysis # Please check the file for further details
 #%% 1.1 Write custom function
 from libraries import losses # Please check the file for further details
@@ -167,6 +171,13 @@ fig.suptitle('model: {}; loss: {}'.format('cnn_tf',model.configure.custom_loss))
 # Save current python environment variables for future references
 # <...>
 
+
+#%% ***********************************************************************************************************************************************
+#%% ***********************************************************************************************************************************************
+#%% ***********************************************************************************************************************************************
+#%% ***********************************************************************************************************************************************
+
+
 #%% PART 2
 # TODO:
 # 1. Classify each data point in D_corrupt.
@@ -216,11 +227,52 @@ model = RNN_tf(configure);
 # Make data compatible with the model
 x_c_expanded = np.expand_dims(x_c,axis=-1)
 # Infer sample by sample by sending as [1,x_c_len,1] dimensional input because this is RNN and we have variable lengths
-predictions = [];
-for i in range(x_c.shape[0]):
-    progressBarSimple(i,x_c.shape[0]);
-    result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,x_c_len[i],:],model.y_:None})
-    predictions.append(result[0]);
+with tf.Session() as sess:
+    # Restore variables from disk.
+    saver = tf.train.Saver() # To restore Variables and Constants
+    saved_path = os.path.join(configure.model_save_inference, "model.ckpt")
+    saver.restore(sess, saved_path); print("Model restored from path: {}".format(saved_path))
+    predictions = [];
+    for i in range(x_c.shape[0]):
+        progressBarSimple(i,x_c.shape[0]);
+        result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,x_c_len[i],:],model.y_:None})
+        predictions.append(result[0]);
+predictions = np.stack(predictions)
+predictions = np.reshape(predictions, [predictions.shape[0],10])
+classes = np.argmax(predictions,axis=1)
+#%% 2.1.3 Classification using CNN Model
+# Load Model
+from models.ts_classification.ts_cnn import Configure_CNN, CNN_tf
+config_file_path = './logs/ts_classification/cnn_tf_cosine_distance/model_configs'
+with open(config_file_path, 'rb') as opfile:
+    configure = dill.load(opfile)
+    opfile.close()
+print(configure.custom_loss);
+model = CNN_tf(configure);
+# Make data compatible with the model
+x_c_expanded = np.expand_dims(x_c,axis=-1)
+# Infer sample by sample by sending as [1,457,1] dimensional input because the CNN should be fed with full dimension as in training
+with tf.Session() as sess:
+    # Restore variables from disk.
+    saver = tf.train.Saver() # To restore Variables and Constants
+    saved_path = os.path.join(configure.model_save_inference, "model.ckpt")
+    saver.restore(sess, saved_path); print("Model restored from path: {}".format(saved_path))
+    predictions = [];
+    for i in range(x_c.shape[0]):
+        progressBarSimple(i,x_c.shape[0]);
+        result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,x_c_len[i],:],model.y_:None})
+        predictions.append(result[0]);
+predictions = np.stack(predictions)
+predictions = np.reshape(predictions, [predictions.shape[0],10])
+classes = np.argmax(predictions,axis=1)
+#%% Save as npz
+np.savez('corrupt_labels.npz', classes);
+
+
+#%% ***********************************************************************************************************************************************
+#%% ***********************************************************************************************************************************************
+#%% ***********************************************************************************************************************************************
+#%% ***********************************************************************************************************************************************
 
 
 #%% PART 3
@@ -232,24 +284,19 @@ for i in range(x_c.shape[0]):
 A generic model has been developed for all classes to predict the next 25 samples. A more effective way would be to train individual model per class
 Seq2Seq Learning with scheduled training has been used in prediction
 '''
-# 3.0.1 Data Preperation for model training
-#labelled = x_c.copy();
-#fig_rows, fig_cols = 7, 2
-#fig, ax = plt.subplots(fig_rows, fig_cols, figsize=(16, 5))
-#row_inds = np.random.choice(labelled.shape[0],fig_rows*fig_cols,replace=False);
-#for fig_row in range(fig_rows):
-#    for fig_col in range(fig_cols):
-#        ax[fig_row,fig_col].plot(labelled[row_inds[fig_row*fig_cols+fig_col],:]);
-#        ax[fig_row,fig_col].set_title('{}'.format(row_inds[fig_row*fig_cols+fig_col]),y=0.93);
-#for axx in ax.flat: # Hide x labels and tick labels for top plots and y ticks for right plots.
-#    axx.label_outer()
-#fig.suptitle('Label: {}'.format(label))
-
-# Set configuration and create RNN model template
+#%% 3.0.1 Load clean data
+x, y_labels = datasets.data_reader.read_clean_dataset(summary=True)
+y = datasets.data_reader.one_hot(y_labels)
+x_train, y_train, x_test, y_test = train_test_split(x, y)
+#%% 3.0.2 Some Data Analysis on clean data
+ # from libraries import data_analysis # Please check the file for further details
+#%% 3.1 Training Model for time-series prediction using Seq2Seq RNN Model with Scheduled Training
+from models.ts_prediction.ts_seq2seq import Configure_Seq2Seq, Seq2Seq_tf
+# Create Model/ Load Model
 configure = Configure_Seq2Seq();
+configure.custom_loss = 'regression_error' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
 configure.create_folders_();
 model = Seq2Seq_tf(configure);
-
 # Training and inference
 generate_new_data_every, test_every, start_epoch = 100, 1, 0; # Define when to do testing and also set the starting epoch
 if start_epoch==0: # Useful when restarting the training from an earlier stopped training phase
@@ -319,13 +366,38 @@ with tf.Session() as sess:
             # Flush the data
             print('Tensorboard logs Saved at {}'.format(writer.get_logdir()))
             writer.flush()
-## Stack Results and plot graphs
-#train_loss_, test_loss_ = np.stack(train_loss_), np.stack(test_loss);
-#train_acc_, test_acc_ = np.stack(train_acc_), np.stack(test_acc_);
-#fig, ax = plt.subplots(1,2)
-#ax[0].plot(range(len(train_loss_)), train_loss_,'b',range(len(test_loss_)), test_loss_,'b');
-#ax[0].set_xlabel('EPOCHS'); ax[0].set_ylabel('LOSS'); ax[0].set_title('TRAIN vs TEST LOSS'); ax[0].grid();
-#ax[1].plot(range(len(train_acc_)), train_acc_,'b',range(len(test_acc_)), test_acc_,'b');
-#ax[1].set_xlabel('EPOCHS'); ax[1].set_ylabel('ACCURACY'); ax[1].set_title('TRAIN vs TEST ACC'); ax[1].grid();
-## Save current python environment variables for future references
-## <...>
+# Stack Results
+train_loss_, test_loss_ = np.stack(train_loss_), np.stack(test_loss_);
+# Plot results
+fig, ax = plt.subplots(1,1)
+ax[0].plot(range(len(train_loss_)), train_loss_, 'b', label='train_loss_')
+ax[0].plot(range(len(test_loss_)), test_loss_, 'r', label='test_loss_')
+ax[0].legend(); ax[0].set_xlabel('EPOCHS'); ax[0].set_ylabel('LOSS'); ax[0].set_title('TRAIN vs TEST LOSS'); ax[0].grid();
+fig.suptitle('model: {}; loss: {}'.format('seq2seq_tf',model.configure.custom_loss))
+# Save current python environment variables for future references
+# <...>
+#%% 3.2 Predict next 25 samples for each given sample in x_c
+# Load Model
+from models.ts_prediction.ts_seq2seq import Configure_Seq2Seq, Seq2Seq_tf
+config_file_path = './logs/ts_prediction/seq2seq_tf_regression_error/model_configs'
+with open(config_file_path, 'rb') as opfile:
+    configure = dill.load(opfile)
+    opfile.close()
+print(configure.custom_loss);
+model = Seq2Seq_tf(configure);
+# Make data compatible with the model
+x_c_expanded = np.expand_dims(x_c,axis=-1)
+# Infer sample by sample by sending as [1,x_c_len,1] dimensional input because this is RNN and we have variable lengths
+with tf.Session() as sess:
+    # Restore variables from disk.
+    saver = tf.train.Saver() # To restore Variables and Constants
+    saved_path = os.path.join(configure.model_save_inference, "model.ckpt")
+    saver.restore(sess, saved_path); print("Model restored from path: {}".format(saved_path))
+    predictions = [];
+    for i in range(x_c.shape[0]):
+        progressBarSimple(i,x_c.shape[0]);
+        result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,x_c_len[i],:],model.y_:None})
+        predictions.append(result[0]); # result[0] will be of size [1,25,1]
+predictions = np.vstack(predictions) # [30000,25,1]
+predictions = np.reshape(predictions, [predictions.shape[0],25]); #[30000,25]
+np.savez('corrupt_prediction.npz', predictions);

@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Jun  9 19:58:47 2018
 @author: murali.sai
 ----
 Notes
 MLP for Time-Series Classification using tensorflow library
-----------
-References
-[0] ...
-[1] ...
 """
 import os, numpy as np
 import tensorflow as tf

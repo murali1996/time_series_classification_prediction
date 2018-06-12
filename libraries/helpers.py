@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jun  8 18:38:56 2018
 @author: murali.sai
 """
+
 import math
 import numpy as np
 def train_test_split(X, Y, train_fraction=0.8, shuffle=False):

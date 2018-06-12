@@ -1,31 +1,36 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jun  8 18:38:56 2018
 @author: murali.sai
 """
+
 import datasets.data_reader
 from libraries.helpers import train_test_split, progressBarSimple
 import numpy as np
 from matplotlib import pyplot as plt
 
+#%% MAIN
+
 if __name__=="__main__":
-    #%% Load clean data and do some data analysis
+    
+    #%% Load clean data
     x, y_labels = datasets.data_reader.read_clean_dataset(summary=True)
     y = datasets.data_reader.one_hot(y_labels)
     x_train, y_train, x_test, y_test = train_test_split(x, y)
     #%% Load corrupted dataset
     x_c, x_c_len = datasets.data_reader.read_corrupted_dataset(summary=True)
+    
     #%% 1. Checking the Shapes and the range of values
     assert(x.shape[0]==y.shape[0])
     for data in [x_train, y_train, x_test, y_test]:
         print(data.shape)
     print('max and min in x_train: {}, {}'.format(np.max(x_train),np.min(x_train)))
     print('max and min in x_test: {}, {}'.format(np.max(x_test),np.min(x_test)))
-    print('any NaNs? {}, {}'.format(np.sum(np.isnan(x_train)),np.sum(np.isnan(x_test))))
+    print('NaNs in x_train: {}, NaNs in x_test: {}'.format(np.sum(np.isnan(x_train)),np.sum(np.isnan(x_test))))
 
     #%% 2. Number of samples per batch in x
     n_samples = [np.sum(y_labels==label) for label in np.unique(y_labels)]
-    plt.figure(); bar_gr = plt.bar(np.unique(y_labels)/np.sum(n_samples),n_samples); plt.xlabel('LABELS'); plt.ylabel('COUNT'); plt.title(' % Samples per class');
+    plt.figure(); bar_gr = plt.bar(np.unique(y_labels),n_samples/np.sum(n_samples)); plt.xticks(np.unique(y_labels));
+    plt.xlabel('LABELS'); plt.ylabel('COUNT'); plt.title(' % Samples per class');
     for rect in bar_gr:
         plt.text(rect.get_x() + rect.get_width()/2.0, rect.get_height(), '{:.2f}%'.format(100*rect.get_height()), ha='center', va='bottom')
 
@@ -38,7 +43,7 @@ if __name__=="__main__":
         for fig_row in range(fig_rows):
             for fig_col in range(fig_cols):
                 ax[fig_row,fig_col].plot(labelled[row_inds[fig_row*fig_cols+fig_col],:]);
-                ax[fig_row,fig_col].set_title('{}'.format(row_inds[fig_row*fig_cols+fig_col]));
+                ax[fig_row,fig_col].set_title('{}'.format(row_inds[fig_row*fig_cols+fig_col]),y=0.93);
         for axx in ax.flat: # Hide x labels and tick labels for top plots and y ticks for right plots.
             axx.label_outer()
         fig.suptitle('Time-Series-Plots (Samples randomly selected from) @Class_Label:: {}'.format(label))
@@ -56,7 +61,7 @@ if __name__=="__main__":
         plt.xlabel('correlation'); plt.ylabel('hist_count'); plt.title('Within-Class Correlation Histogram; time_shift=0; Label:{}'.format(label));
         for rect in bar_gr:
             plt.text(rect.get_x() + rect.get_width()/2.0, rect.get_height(), '{:.3f}%'.format(100*rect.get_height()), ha='center', va='bottom')
-    for label in range(y.shape[-1]): #Time and memory consuming!
+    for label in range(y.shape[-1]): #Time and memory consuming alert!
         labelled = x[np.where(y[:,label]==1)[0],:]
         means_ = np.mean(labelled,axis=1).reshape([labelled.shape[0],1]);
         labelled = labelled-means_; labelled_T = labelled.T;
@@ -78,7 +83,7 @@ if __name__=="__main__":
     #%% 5. PCA; Dimensionality Reduction and TSNE Visualization
     from sklearn.decomposition import PCA
     pca = PCA(n_components=x.shape[-1]).fit(x);
-    plt.figure(); plt.plot(pca.explained_variance_); plt.grid(); plt.title('PCA Cummulative Variance across all dims')
+    plt.figure(); plt.plot(pca.explained_variance_); plt.grid(); plt.title('PCA Variance across each dimension')
     pca_top2 = pca.transform(x)[:,:2]
     plt.figure(); plt.scatter(pca_top2[:,0],pca_top2[:,1], s=0.01); plt.title('PCA Top-2 Dimensions')
     from sklearn.manifold import TSNE
@@ -88,10 +93,10 @@ if __name__=="__main__":
     tsne_dims2_c = tsne_c.fit_transform(x_c)
     plt.figure();
     plt.scatter(tsne_dims2[:,0],tsne_dims2[:,1], s=0.1, c='r'); #plt.title('Clean_Data: TSNE (down-to) 2 Dimensions');
-    plt.scatter(tsne_dims2[:,0],tsne_dims2[:,1], s=0.1, c='b'); #plt.title('Corrupt_data: TSNE (down-to) 2 Dimensions');
-    plt.show();
+    plt.scatter(tsne_dims2_c[:,0],tsne_dims2_c[:,1], s=0.1, c='b'); #plt.title('Corrupt_data: TSNE (down-to) 2 Dimensions');
+    plt.tile('tSNE'); plt.show();
 
-    #%% 6 FFT on the time-series data
+    #%% 6. FFT on the time-series data
     fft_x = np.abs(np.fft.fft(x,axis=1)); fft_x = fft_x[:,:int(np.ceil(x.shape[1]/2))+1]
     for label in range(y.shape[-1]):
         labelled = fft_x[np.where(y[:,label]==1)[0],:]
@@ -104,7 +109,7 @@ if __name__=="__main__":
                 ax[fig_row,fig_col].set_title('{}'.format(row_inds[fig_row*fig_cols+fig_col]),y=.93);
         for axx in ax.flat: # Hide x labels and tick labels for top plots and y ticks for right plots.
             axx.label_outer()
-        fig.suptitle('Time-Series-FFT-Plots (Samples randomly selected from) @Class_Label:: {}'.format(label))
+        fig.suptitle('Time-Series-FFT-Plots (Samples randomly selected from) @Label:: {}'.format(label))
 
     #%% 7.1 Mean-Crossing Variations in each class
     a = x.copy()-np.mean(x,axis=1).reshape([x.shape[0],1]);
