@@ -6,7 +6,7 @@ Assignment: Deep Learning
 
 **FOLDER STRUCTURE** 
 
-In this submission, you will be finding a total of 9 code-files organized into two main folders. The folder **libraries** contain the main driver codes along with other essential helper functions. The folder **models** contain the model architecture codes along with their configuration codes written in tensorflow. Both the classification as well as sequence prediction codes are organized in this folder itself. All logs saved during training and optimization, including the configuration details are saved in the model respective folder in **logs** folder.
+In this submission, you will be finding a total of 8 code-files organized into two main folders. The folder **libraries** contain the main driver codes along with other essential helper functions. The folder **models** contain the model architecture codes along with their configuration codes written in tensorflow. Both the classification as well as sequence prediction codes are organized in this folder itself. All logs saved during training and optimization, including the configuration details are saved in the model respective folder in **logs** folder.
 
     .
     ├── datasets
