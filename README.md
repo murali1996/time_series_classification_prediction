@@ -4,14 +4,15 @@ Assignment: Deep Learning </br>
 
 **FOLDER STRUCTURE** </br>
 In this submission, you will be finding a total of 9 code-files organized into two main folders. The folder **libraries** contain the main driver codes along with other essential helper functions. The folder **models** contain the model architecture codes along with their configuration codes written in tensorflow. Both the classification as well as sequence prediction codes are organized in this folder itself. All logs saved during training and optimization, including the configuration details are saved in the model respective folder in **logs** folder.
-.
-├── build                   # Compiled files (alternatively `dist`)
-├── docs                    # Documentation files (alternatively `doc`)
-├── src                     # Source files (alternatively `lib` or `app`)
-├── test                    # Automated tests (alternatively `spec` or `tests`)
-├── tools                   # Tools and utilities
-├── LICENSE
-└── README.md
+    .
+    ├── ...
+    ├── test                    # Test files (alternatively `spec` or `tests`)
+    │   ├── benchmarks          # Load and stress tests
+    │   ├── integration         # End-to-end, integration tests (alternatively `e2e`)
+    │   └── unit                # Unit tests
+    └── ...
+
+
 
 . </br>
 ├── datasets </br>                            
