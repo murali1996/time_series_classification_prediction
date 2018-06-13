@@ -21,20 +21,20 @@ In this submission, you will be finding a total of 8 code-files organized into t
     │   └── data_analysis.py              # data analysis on clean data; pca, tSNE, correlation, fft, etc.
     ├── models
     │	├── ts_classification
-    		├── __init__
-    		├── ts_mlp                    # A dense layer neural network for time-series classification
-    		├── ts_rnn                    # A recurrent neural network for time-series classification
-    		└── ts_cnn                    # A (1D) convolutional neural network for time-series classification
-    │	└── ts_prediction
-    		├── __init__
-    		└── ts_seq2seq                # A recurrent sequence2sequence neural network for time-series prediction
+     	│	├── __init__
+     	│	├── ts_mlp                    # A dense layer neural network for time-series classification
+     	│	├── ts_rnn                    # A recurrent neural network for time-series classification
+     	│	└── ts_cnn                    # A (1D) convolutional neural network for time-series classification
+    │	├── ts_prediction
+     	│	├── __init__
+     	│	└── ts_seq2seq                # A recurrent sequence2sequence neural network for time-series prediction
     ├── logs
-    │	├── _model_name_+_loss_function_  # configurations details, training logs, variable summaries, tensorboard, etc.
-    		├── tf_logs                   # tensorflow Writer logs for tensorboard, variable summaries, histograms and projections
-            	└── ...
-    		├── infer_best                # Model saving during validation/inference
-    		├── train_best                # Model saving during training
-    		└── model_configs             # Configuration files with architectural parameter details 
+	│	├── _model_name_+_loss_function_   # configurations details, training logs, variable summaries, tensorboard, etc.
+     	│	├── tf_logs                   # tensorflow Writer logs for tensorboard, variable summaries, histograms and projections
+     	│	│	└── ...
+     	│	├── infer_best                # Model saving during validation/inference
+     	│	├── train_best                # Model saving during training
+     	│	└── model_configs             # Configuration files with architectural parameter details 
             
     ├── images
     │   └── _model_name_+_loss_function_.png # Loss and Accuracy Images for different models with different loss functions
