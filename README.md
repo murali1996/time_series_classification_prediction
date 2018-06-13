@@ -67,6 +67,8 @@ Analysis such as what the conv layers have learnt, or analysis on latent embeddi
 ============================================
 It was mentioned that the *cr-data* was sampled from same distribution as the *cl-data*. Hence, prior to inference on *cr-data*, data similar to *cr-data* was generated from the 6K sample set set aside for inference purpose. Analysis of the different models on this generated data gave some results to expect on *cr-data* as well as helped to choose the importance of each model in ensemble result. Also, data analysis, as performed on *(cl-data)* was also done on the *(cr-data)*.
 
+During inference, inputs to different models were given in different manner. While *mlp* and *cnn* models required a fixed length input (same as during training), *rnn* was fed with the effective length input. The effective length for *cr-data* samples is the legth of each corrupted sample without the trailing zeros.
+
 Finally, an ensemble result collated from best models in *mlp*, *rnn* and *cnn* architectures was used in classification of corrupted data *(cr-data)*. While a high weightage is alloted for *rnn* model, equal weightage is alloted to the rest of the models. The results are saved in *corrupt_labels.npz* file.
 
 **Part 3**
