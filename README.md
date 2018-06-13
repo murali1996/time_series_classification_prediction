@@ -2,44 +2,41 @@
 Name: J Sai Muralidhar, jsaimurali001@gmail.com </br>
 Assignment: Deep Learning </br>
 
-**FOLDER STRUCTURE** </br>
+**FOLDER STRUCTURE** 
+
 In this submission, you will be finding a total of 9 code-files organized into two main folders. The folder **libraries** contain the main driver codes along with other essential helper functions. The folder **models** contain the model architecture codes along with their configuration codes written in tensorflow. Both the classification as well as sequence prediction codes are organized in this folder itself. All logs saved during training and optimization, including the configuration details are saved in the model respective folder in **logs** folder.
+
     .
-    ├── ...
-    ├── test                    # Test files (alternatively `spec` or `tests`)
-    │   ├── benchmarks          # Load and stress tests
-    │   ├── integration         # End-to-end, integration tests (alternatively `e2e`)
-    │   └── unit                # Unit tests
-    └── ...
+    ├── datasets
+    │   ├── figs
+    │   ├── corrupted_series.npz
+    │   ├── full.npz
+    │   └── data_reader.py                # Code file to read clean and corrupted data
+    ├── libraries
+    │   ├── losses.py                     # categorical_crossentorpy, cosine_distance, regression_error, hinge_loss (with basic tf ops) 
+    │   ├── helpers.py                    # train_test_split, progressBar functions available </br>
+    │   ├── deep_learning.py              # driver file for the three parts described below </br>
+    │   └── data_analysis.py              # data analysis on clean data; pca, tSNE, correlation, fft, etc.
+    ├── models
+    │	├── models
+    		├── __init__
+    		├── ts_mlp                    # A dense layer neural network for time-series classification
+    		├── ts_rnn                    # A recurrent neural network for time-series classification
+    		└── ts_cnn                    # A (1D) convolutional neural network for time-series classification
+    │	└── models
+    		├── __init__
+    		└── ts_seq2seq                # A recurrent sequence2sequence neural network for time-series prediction
+    ├── logs
+    │	├── _model_name_+_loss_function_  # configurations details, training logs, variable summaries, tensorboard, etc.
+    		├── tf_logs                   # tensorflow Writer logs for tensorboard, variable summaries, histograms and projections
+            	└── ...
+    		├── infer_best                # Model saving during validation/inference
+    		├── train_best                # Model saving during training
+    		└── model_configs             # Configuration files with architectural parameter details 
+            
+    ├── images
+    │   └── _model_name_+_loss_function_.png # Loss and Accuracy Images for different models with different loss functions
 
-
-
-. </br>
-├── datasets </br>                            
-|   ├── figs </br>
-|   ├── corrupted_series.npz </br>
-|   ├── full.npz </br>
-|   └── data_reader.py                # Code file to read clean and corrupted data  </br>
-├── libraries </br>
-|   ├── losses.py                    # categorical_crossentorpy, cosine_distance, regression_error, hinge_loss (with basic tf ops) </br>
-|   ├── helpers.py                    # train_test_split, progressBar functions available </br>
-|   ├── deep_learning.py              # driver file for the three parts described below </br>
-|   └── data_analysis.py              # data analysis on clean data; pca, tSNE, correlation, fft, etc. </br>
-├── models </br>
-|   ├── ts_classification </br>
-|       ├── ts_mlp                    # A dense layer neural network for time-series classification </br>
-|       ├── ts_rnn                    # A recurrent neural network for time-series classification </br>
-|       └── ts_cnn                    # A (1D) convolutional neural network for time-series classification </br>
-|   └── ts_prediction </br>
-|       └── ts_seq2seq                # A recurrent sequence2sequence neural network for time-series prediction </br>
-├── logs </br>
-|   └── <model_name_+_loss_function>  # configurations details, training logs, variable summaries, tensorboard, etc. </br>
-|       ├── tf_logs </br>
-|       ├── infer_best </br>
-|       ├── train_best </br>
-|       └── model_configs </br>
-└── images                            # Loss and Accuracy Images for different models with different loss functions </br>
-|   └── <model_name_+_loss_function>.png </br>
 
 **PART 1** </br> 
 1. Loss functions: </br>
