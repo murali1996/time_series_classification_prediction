@@ -58,18 +58,16 @@ Analysis such as what the conv layers have learnt, or analysis on latent embeddi
 &nbsp;&nbsp;&nbsp;&nbsp; (iv) While using Deep Learning was the main objective in this experiment, other ML techniques such as k-NN can also be used for classification of the cl-data. But it again imposes a constraint on flexibilty wrt length of training and testing time-series data. </br>
 &nbsp;&nbsp;&nbsp;&nbsp; (v) Short-term feature extraction; Breaking the lengthy sequence into consecutive overlapping short-segments of data and extracting suitable features for each of the short-segments, which then act as a summarized time-series information. MFCC feature extraction is a suitable example here. </br>
     
-**Part 2**
-1. Corrupted Data *(cr-data)* Classification:
-============================================
+### **Part 2**
+## 1. Corrupted Data *(cr-data)* Classification:
 It was mentioned that the *cr-data* was sampled from same distribution as the *cl-data*. Hence, prior to inference on *cr-data*, data similar to *cr-data* was generated from the 6K sample set set aside for inference purpose. Analysis of the different models on this generated data gave some results to expect on *cr-data* as well as helped to choose the importance of each model in ensemble result. Also, data analysis, as performed on *(cl-data)* was also done on the *(cr-data)*.
 
 During inference, inputs to different models were given in different manner. While *mlp* and *cnn* models required a fixed length input (same as during training), *rnn* was fed with the effective length input. The effective length for *cr-data* samples is the legth of each corrupted sample without the trailing zeros.
 
 Finally, an ensemble result collated from best models in *mlp*, *rnn* and *cnn* architectures was used in classification of corrupted data *(cr-data)*. While a high weightage is alloted for *rnn* model, equal weightage is alloted to the rest of the models. The results are saved in *corrupt_labels.npz* file.
 
-**Part 3**
-1. Time-series Prediction:
-=================================
+### **Part 3**
+## 1. Time-series Prediction:
 A simple recurrent seq2seq network was developed for the task of time-series prediction. At encoder, a bi-directional LSTM multi-cell unit was utilized. The output of encoder was then passed through a dense network and then utilized as input for uni-directional multi-cell decoder. *Schedule Training* technique was incorporated during training phase. 
 
 Due to unavailability of good GPU resources, not many experiments could be performed. For training the seq2seq model, *(cl-data)* was utilized.  The encoder side was treated with 100 time-units (picked randomly) from each sample in *cl-data*; 100 is choosen because each sample in *(cr-data)* had at-least 100 time-units. A more effective approach would be to train the encoder with lengthier time-units as well so as to capture long-term data patterns. Several un-explored ideas described in *Part 1* can also be adopted here, such as attention-mechanism, fully-convolutional layers, etc. to make the architecture more robust and effective to any length test-data. The results with this simple architecture are saved in *corrupt_prediction.npz*.
