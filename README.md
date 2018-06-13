@@ -39,10 +39,9 @@ In this submission, you will be finding a total of 8 code-files organized into t
     ├── images
     │   └── _model_name_+_loss_function_.png # Loss and Accuracy Images for different models with different loss functions
 
+**PART 1**
 
-**PART 1** 
-
-1.Loss functions:
+1. Loss functions:
 =================
 Some custom loss functions have been implemented using basic tf ops.
 2. Data Analysis:
