@@ -73,6 +73,7 @@ A simple recurrent seq2seq network was developed for the task of time-series pre
 Due to unavailability of good GPU resources, not many experiments could be performed. For training the seq2seq model, *(cl-data)* was utilized.  The encoder side was treated with 100 time-units (picked randomly) from each sample in *cl-data*; 100 is choosen because each sample in *(cr-data)* had at-least 100 time-units. A more effective approach would be to train the encoder with lengthier time-units as well so as to capture long-term data patterns. Several un-explored ideas described in *Part 1* can also be adopted here, such as attention-mechanism, fully-convolutional layers, etc. to make the architecture more robust and effective to any length test-data. The results with this simple architecture are saved in *corrupt_prediction.npz*.
 
 **Requirements** 
+
 To set up the environment, please do:
 ```
 git clone https://github.com/murali1996/ts_classification_prediction
