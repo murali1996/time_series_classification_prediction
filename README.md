@@ -52,6 +52,8 @@ During training, it was trivial that the *rnn* model consumed a lot more time co
 
 Analysis such as what the conv layers have learnt, or analysis on latent embeddings, etc were left for future work. The architectural parameters like number of filters, cells, units, etc. were not fully explored during this experimentation. Also, some modifications that couldn't be incorporated right now but can be analyzed as future work are:
 
+1. A
+2. B
 &nbsp;&nbsp;&nbsp;&nbsp; (i) Attention mechanism in RNN. Although LSTMs are designed to remember information for over long time-units, too long time-units makes remeberance of very long term memory challenging. Input-Attention mechanism can come handy in such scenarios. Truncated BPTT technique can also be used along with Attention mechanism in RNNs. </br>
 &nbsp;&nbsp;&nbsp;&nbsp; (ii) A fully-convolutional RNN (FC-RNN) might overcome the long training time of RNNs in time-series data, data such as the one in this experiment. While the fully-convolutional part of the architecture captures short-term patterns in the data, RNN on top of it can better model these recurring short-term patterns in lengthy time-series data. </br>
 &nbsp;&nbsp;&nbsp;&nbsp; (iii) An approach similar to (ii) wherein we employ auto-encoders to capture short-term time series pattern for further modelling. Also, fully-convolutional architecture that acts as an auto-encoder can be developed to encode each input time-series into latent vector. A fully-convolutional because it relaxes the need for fixed length time-series data. </br>
