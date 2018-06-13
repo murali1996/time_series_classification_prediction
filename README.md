@@ -20,12 +20,12 @@ In this submission, you will be finding a total of 9 code-files organized into t
     │   ├── deep_learning.py              # driver file for the three parts described below </br>
     │   └── data_analysis.py              # data analysis on clean data; pca, tSNE, correlation, fft, etc.
     ├── models
-    │	├── models
+    │	├── ts_classification
     		├── __init__
     		├── ts_mlp                    # A dense layer neural network for time-series classification
     		├── ts_rnn                    # A recurrent neural network for time-series classification
     		└── ts_cnn                    # A (1D) convolutional neural network for time-series classification
-    │	└── models
+    │	└── ts_prediction
     		├── __init__
     		└── ts_seq2seq                # A recurrent sequence2sequence neural network for time-series prediction
     ├── logs
