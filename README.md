@@ -43,9 +43,11 @@ In this submission, you will be finding a total of 8 code-files organized into t
 
 1. Loss functions:
 =================
+
 Some custom loss functions have been implemented using basic tf ops.
 2. Data Analysis:
 =================
+
 Before developing a neural network for time-series classification, a basic data analysis was performed on the clean-data *(cl-data)*. The cl-data has 30K data samples each of length 457 time-units. Instances of null or invalid data has not been found and the data ranged between 0 and 1. The number of samples-per-class across all classes has a mean of 3000 and standard deviation of 178.2 samples, which implies that the data is not skewed. Time-series plots of randomly picked samples from each class were drawn for visual understanding; looking for any visual patterns in common among same class samples. While it was observed that a visual similarity exists, a tSNE simulation was also done with perplexity 30 and an image of the same can be found in *images* folder. It was found that the data samples formed dense clusters in tSNE plot. A PCA analysis revealed that first 83, 143 and 239 principal componenets explained a variance of 90%, 95% and 98% respectively. While techniques such as fft, #mean-crossings, signal-energy were also computed, their analysis didn't prove to be of much importance. 
 3. Neural Networks:
 ===================
