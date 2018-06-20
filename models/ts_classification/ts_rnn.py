@@ -2,7 +2,7 @@
 """
 @author: murali.sai
 ----
-Notes
+Notes:
 RNN for Time-Series Classification using tensorflow library
 """
 import os, numpy as np
@@ -17,7 +17,7 @@ class Configure_RNN(object):
         assert(len(self.dense_layer_units)==len(self.dropout_rates))
         self.custom_loss = 'categorical_crossentropy' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
         if self.custom_loss=='categorical_crossentropy':
-            self.last_activation = tf.nn.relu;
+            self.last_activation = tf.nn.relu; # Or self.last_activation = None;
         elif self.custom_loss=='cosine_distance' or self.custom_loss=='regression_error':
             self.last_activation = tf.nn.sigmoid;
         # Training and optimization
