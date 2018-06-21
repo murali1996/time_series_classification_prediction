@@ -2,10 +2,32 @@
 """
 @author: murali.sai
 ---
-Notes
+Notes:
 Viewed best in spyder
+
+Good Reading:
+[1] https://burakhimmetoglu.com/2017/08/22/time-series-classification-with-tensorflow/
+[2] https://blog.cardiogr.am/applying-artificial-intelligence-in-medicine-our-early-results-78bfe7605d32
 ---
 """
+#%% PART 1
+# TODO:
+# 1. Implement some custom objectives:
+#    cross-entropy (done), cosine distance, regression error, hinge loss
+# 2. Implement network architectures:
+#    MLP (done), RNN, CNN, etc.
+# 3. Train a classifier for time-series classification task
+#%% PART 2
+# TODO:
+# 1. Classify each data point in D_corrupt.
+#    Numpy array named corrupt_labels.npz with labels in [0,1,...,8,9]
+#%% PART 3
+# TODO:
+# 1. Predict the next 25 samples for each data point in D_corrupt.
+#    Include the results as a shape = (30000,25)
+#    Numpy array named corrupt_prediction.npz.
+
+
 #%% Libraries
 # Custom
 import datasets.data_reader
@@ -16,26 +38,16 @@ from matplotlib import pyplot as plt
 import tensorflow as tf
 
 
-
-#%% PART 1
-# TODO:
-# 1. Implement custom objectives:
-#    cross-entropy (done), cosine distance,
-#    regression error, hinge loss
-# 2. Implement network architectures:
-#    MLP (done), RNN, CNN
-# 3. For each architecture, train a classifier using
-#    cross-entropy, cosine distance, and hinge loss.
-#    Plot loss/accuracy as a function of epoch on one graph.
-#    (9 models total)
-#%% 1.0.1 Load clean data
+#%% 1.0 Data Analysis
+# 1.0.1 Load clean data
 x, y_labels = datasets.data_reader.read_clean_dataset(summary=True)
 y = datasets.data_reader.one_hot(y_labels)
-x_train, y_train, x_test, y_test = train_test_split(x, y)
-#%% 1.0.2 Some Data Analysis on clean data
+x_train, y_train, x_test, y_test = train_test_split(x, y, train_fraction=0.8)
+# 1.0.2 Some Data Analysis on clean data
 from libraries import data_analysis # Please check the file for further details
-#%% 1.1 Write custom function
+#%% 1.1 Write custom functions
 from libraries import losses # Please check the file for further details
+#%% 1.2 Time-Series Classification with Deep Learning
 #%% 1.2.1 MLP for time-series classification using tensorflow library #<Implemenetation in Keras already provided>
 from models.ts_classification.ts_mlp import Configure_MLP, MLP_tf
 # Create Model/ Load Model
@@ -69,7 +81,18 @@ model = CNN_tf(configure);
 x_train_, x_test_ = np.expand_dims(x_train,axis=-1), np.expand_dims(x_test,axis=-1);
 x_train_, y_train_ = model.make_data_for_batch_training_CNN(x_train_, y_train)
 x_test_, y_test_ = model.make_data_for_batch_training_CNN(x_test_, y_test)
-#%% 1.3 Train the model selected from [1.2.1, 1.2.2, 1.2.3] with one of the three loss function
+#%% 1.2.4 FC_RNN for Time-Series Classification using tensorflow library
+from models.ts_classification.ts_fc_rnn import Configure_FC_RNN, FC_RNN_tf
+# Create Model/ Load Model
+configure = Configure_FC_RNN();
+configure.custom_loss = 'categorical_crossentropy' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
+configure.create_folders_();
+model = FC_RNN_tf(configure);
+# Make data compatible with the architecture defined; function available in model class itself
+x_train_, x_test_ = np.expand_dims(x_train,axis=-1), np.expand_dims(x_test,axis=-1);
+x_train_, y_train_ = model.make_data_for_batch_training_FC_RNN(x_train_, y_train)
+x_test_, y_test_ = model.make_data_for_batch_training_FC_RNN(x_test_, y_test)
+#%% 1.3 Train the model selected from [1.2.1, 1.2.2, 1.2.3, 1.2.4] with one of the three loss function
 '''
 Notes
 1. Parameters such as no. of units in dense layers/rnn cells, learning rate, n_epochs, patience, etc.
@@ -171,19 +194,39 @@ fig.suptitle('model: {}; loss: {}'.format(model.__class__.__name__,model.configu
 #%% ***********************************************************************************************************************************************
 #%% ***********************************************************************************************************************************************
 
-
-#%% PART 2
-# TODO:
-# 1. Classify each data point in D_corrupt.
-#    Feel free to use any of the network architectures/objectives above,
-#    and to perform any analysis or pre-processing on the data
-#    that may improve the classification accuracy.
-#    With your submission, include the results as a shape = (30000,)
-#    Numpy array named corrupt_labels.npz with labels in [0,1,...,8,9].
-# 2. Document the methods/strategies you used in part 2.1 in your README.
-#%% 2.0 Load corrupted dataset
+#%% 2.0 Load Data
+'''
+Since we donot have labels for corrupt data, corrupt data from clean data is generated.
+On the assumption that both data sets are derived from same data distributions.
+'''
+# 2.0.1 Load corrupted dataset
 x_c, x_c_len = datasets.data_reader.read_corrupted_dataset(summary=True)
-#%% 2.1 Classify each sample in x_c
+# 2.0.2 Load clean data
+x, y_labels = datasets.data_reader.read_clean_dataset(summary=True)
+y = datasets.data_reader.one_hot(y_labels)
+x_train, y_train, x_test, y_test = train_test_split(x, y, train_fraction=0.8)
+# 2.0.3 Corrupt Clean data
+mean, std = np.mean(x_c_len), np.std(x_c_len);
+x_train_my_c, x_test_my_c = x_train.copy(), x_test.copy();
+x_train_my_c_len, x_test_my_c_len = np.zeros(len(x_train_my_c)).astype('int32'), np.zeros(len(x_test_my_c)).astype('int32');
+for i in range(x_train_my_c.shape[0]):
+    sampled_len = np.max([np.min([x_train_my_c.shape[-1],np.int(np.round(np.random.normal(mean, std)))]),156]);
+    start_ind = np.random.randint(low=0,high=x_train_my_c.shape[-1]-sampled_len+1,size=1)[0]; end_ind = start_ind+sampled_len;
+    x_train_my_c[i,:end_ind-start_ind] = x_train_my_c[i,start_ind:end_ind]; x_train_my_c[i,end_ind-start_ind:]*=0;
+    x_train_my_c_len[i] = end_ind-start_ind;
+for i in range(x_test_my_c.shape[0]):
+    sampled_len = np.max([np.min([x_test_my_c.shape[-1],np.int(np.round(np.random.normal(mean, std)))]),156]);
+    start_ind = np.random.randint(low=0,high=x_test_my_c.shape[-1]-sampled_len+1,size=1)[0]; end_ind = start_ind+sampled_len;
+    x_test_my_c[i,:end_ind-start_ind] = x_test_my_c[i,start_ind:end_ind]; x_test_my_c[i,end_ind-start_ind:]*=0;
+    x_test_my_c_len[i] = end_ind-start_ind;
+fig, ax = plt.subplots(1,2);
+ax[0].hist(x_train_my_c_len,bins=10); ax[0].set_title('Sample Lengths: Training Data'); ax[0].grid();
+ax[1].hist(x_test_my_c_len,bins=10); ax[1].set_title('Sample Lengths: Test Data'); ax[1].grid();
+del mean, std, i, sampled_len, start_ind, end_ind, fig, ax
+#%% 2.1 Load the classification model and classify samples
+c_data = x_c #x_train_my_c; #x_test_my_c; #x_c;
+c_labels = np.zeros([c_data.shape[0],10]) #y_train; #y_test; #np.zeros([c_data.shape[0],10]);
+c_len = x_c_len #x_train_my_c_len; #x_test_my_c_len; #x_c_len;
 #%% 2.1.2 Classification using MLP Model
 # Load Model
 tf.reset_default_graph();
@@ -202,17 +245,18 @@ with tf.Session() as sess:
     saver = tf.train.Saver() # To restore Variables and Constants
     saved_path = os.path.join(configure.model_save_inference, "model.ckpt")
     saver.restore(sess, saved_path); print("Model restored from path: {}".format(saved_path))
-    predictions = [];
-    for i in range(x_c.shape[0]):
-        progressBarSimple(i,x_c.shape[0]);
-        result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c[i:i+1,:],model.y_:np.zeros([1,10])})
+    predictions, accuracy = [], [];
+    for i in range(c_data.shape[0]):
+        progressBarSimple(i,c_data.shape[0]);
+        result = sess.run([model.preds,model.accuracy],feed_dict={model.training:False,model.x_:c_data[i:i+1,:],model.y_:c_labels[i:i+1,:]})
         predictions.append(result[0]);
-predictions_MLP = np.stack(predictions)
+        accuracy.append(result[1]);
+predictions_MLP, accuracy_MLP = np.stack(predictions), np.mean(accuracy)
 predictions_MLP = np.reshape(predictions_MLP, [predictions_MLP.shape[0],predictions_MLP.shape[-1]])
 if model.configure.custom_loss=='categorical_crossentropy':
     a = np.exp(predictions_MLP - np.max(predictions_MLP,axis=1).reshape([predictions_MLP.shape[0],1]))
     b = a/np.sum(a,axis=1).reshape([predictions_MLP.shape[0],1])
-    predictions_MLP = b;
+    predictions_MLP = b; del a, b;
 #%% 2.1.2 Classification using RNN Model
 # Load Model
 tf.reset_default_graph();
@@ -224,24 +268,25 @@ with open(config_file_path, 'rb') as opfile:
 print(configure.custom_loss);
 model = RNN_tf(configure);
 # Make data compatible with the model
-x_c_expanded = np.expand_dims(x_c,axis=-1)
+x_c_expanded = np.expand_dims(c_data,axis=-1)
 # Infer sample by sample by sending as [1,x_c_len,1] dimensional input because this is RNN and we have variable lengths
 with tf.Session() as sess:
     # Restore variables from disk.
     saver = tf.train.Saver() # To restore Variables and Constants
     saved_path = os.path.join(configure.model_save_inference, "model.ckpt")
     saver.restore(sess, saved_path); print("Model restored from path: {}".format(saved_path))
-    predictions = [];
-    for i in range(x_c.shape[0]):
-        progressBarSimple(i,x_c.shape[0]);
-        result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,:x_c_len[i],:],model.y_:np.zeros([1,10])})
+    predictions, accuracy = [], [];
+    for i in range(c_data.shape[0]):
+        progressBarSimple(i,c_data.shape[0]);
+        result = sess.run([model.preds,model.accuracy],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,:c_len[i]],model.y_:c_labels[i:i+1,:]})
         predictions.append(result[0]);
-predictions_RNN = np.stack(predictions)
+        accuracy.append(result[1]);
+predictions_RNN, accuracy_RNN = np.stack(predictions), np.mean(accuracy)
 predictions_RNN = np.reshape(predictions_RNN, [predictions_RNN.shape[0],predictions_RNN.shape[-1]])
 if model.configure.custom_loss=='categorical_crossentropy':
     a = np.exp(predictions_RNN - np.max(predictions_RNN,axis=1).reshape([predictions_RNN.shape[0],1]))
     b = a/np.sum(a,axis=1).reshape([predictions_RNN.shape[0],1])
-    predictions_RNN = b;
+    predictions_RNN = b; del a, b;
 #%% 2.1.3 Classification using CNN Model
 # Load Model
 tf.reset_default_graph();
@@ -253,53 +298,78 @@ with open(config_file_path, 'rb') as opfile:
 print(configure.custom_loss);
 model = CNN_tf(configure);
 # Make data compatible with the model
-x_c_expanded = np.expand_dims(x_c,axis=-1)
-# Infer sample by sample by sending as [1,457,1] dimensional input because the CNN should be fed with full dimension as in training
+x_c_expanded = np.expand_dims(c_data,axis=-1)
+# Infer sample by sample by sending as [1,457,1] dimensional input because the CNN should be fed with full dimension as in training because of dense layers
 with tf.Session() as sess:
     # Restore variables from disk.
     saver = tf.train.Saver() # To restore Variables and Constants
     saved_path = os.path.join(configure.model_save_inference, "model.ckpt")
     saver.restore(sess, saved_path); print("Model restored from path: {}".format(saved_path))
-    predictions = [];
-    for i in range(x_c.shape[0]):
-        progressBarSimple(i,x_c.shape[0]);
-        result = sess.run([model.preds],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,:,:],model.y_:np.zeros([1,10])})
+    predictions, accuracy = [], [];
+    for i in range(c_data.shape[0]):
+        progressBarSimple(i,c_data.shape[0]);
+        result = sess.run([model.preds,model.accuracy],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,:],model.y_:c_labels[i:i+1,:]})
         predictions.append(result[0]);
-predictions_CNN = np.stack(predictions)
+        accuracy.append(result[1]);
+predictions_CNN, accuracy_CNN = np.stack(predictions), np.mean(accuracy)
 predictions_CNN = np.reshape(predictions_CNN, [predictions_CNN.shape[0],predictions_CNN.shape[-1]])
 if model.configure.custom_loss=='categorical_crossentropy':
     a = np.exp(predictions_CNN - np.max(predictions_CNN,axis=1).reshape([predictions_CNN.shape[0],1]))
     b = a/np.sum(a,axis=1).reshape([predictions_CNN.shape[0],1])
-    predictions_CNN = b;
+    predictions_CNN = b; del a, b;
+#%% 2.1.4 Classification using FC_RNN Model
+# Load Model
+tf.reset_default_graph();
+from models.ts_classification.ts_fc_rnn import Configure_FC_RNN, FC_RNN_tf
+config_file_path = './logs/ts_classification/fc_rnn_tf_categorical_crossentropy/model_configs'
+with open(config_file_path, 'rb') as opfile:
+    configure = dill.load(opfile)
+    opfile.close()
+print(configure.custom_loss);
+model = FC_RNN_tf(configure);
+# Make data compatible with the model
+x_c_expanded = np.expand_dims(c_data,axis=-1)
+# Infer sample by sample by sending as [1,x_c_len,1] dimensional input because this is FC_RNN and we have variable lengths
+with tf.Session() as sess:
+    # Restore variables from disk.
+    saver = tf.train.Saver() # To restore Variables and Constants
+    saved_path = os.path.join(configure.model_save_inference, "model.ckpt")
+    saver.restore(sess, saved_path); print("Model restored from path: {}".format(saved_path))
+    predictions, accuracy = [], [];
+    for i in range(c_data.shape[0]):
+        progressBarSimple(i,c_data.shape[0]);
+        result = sess.run([model.preds,model.accuracy],feed_dict={model.training:False,model.x_:x_c_expanded[i:i+1,:c_len[i]],model.y_:c_labels[i:i+1,:]})
+        predictions.append(result[0]);
+        accuracy.append(result[1]);
+predictions_FC_RNN, accuracy_FC_RNN = np.stack(predictions), np.mean(accuracy)
+predictions_FC_RNN = np.reshape(predictions_FC_RNN, [predictions_FC_RNN.shape[0],predictions_FC_RNN.shape[-1]])
+if model.configure.custom_loss=='categorical_crossentropy':
+    a = np.exp(predictions_FC_RNN - np.max(predictions_FC_RNN,axis=1).reshape([predictions_FC_RNN.shape[0],1]))
+    b = a/np.sum(a,axis=1).reshape([predictions_FC_RNN.shape[0],1])
+    predictions_FC_RNN = b; del a, b;
 #%% 2.1.4 Get class labels and save them as npz
-# Additionally, ensemble result is done with weights to MLP,RNN,CNN as 0.1,0.6,0.3 respectively
-final_predictions = 0.1*predictions_MLP + 0.8*predictions_RNN + 0.1*predictions_CNN;
+# Additionally, ensemble result can be done with weights to MLP, RNN, CNN, FC_RNN results
+[w_MLP, w_RNN, w_CNN, w_FC_RNN] = [0,0,0,1]; #[0.05,0.2,0.05,0.7];
+final_predictions = w_MLP*predictions_MLP + w_RNN*predictions_RNN + w_CNN*predictions_CNN + w_FC_RNN*predictions_FC_RNN;
 classes = np.argmax(final_predictions,axis=1)
 np.savez('corrupt_labels.npz', classes);
-
+del c_data, c_labels, c_len, i;
 
 #%% ***********************************************************************************************************************************************
 #%% ***********************************************************************************************************************************************
 #%% ***********************************************************************************************************************************************
 #%% ***********************************************************************************************************************************************
-
-
-#%% PART 3
-# TODO:
-# 1. Predict the next 25 samples for each data point in D_corrupt.
-#    With your submission, include the results as a shape = (30000,25)
-#    Numpy array named corrupt_prediction.npz.
+#%% 3.0.1 Load clean data
 '''
 -A generic model has been developed for all classes to predict the next 25 samples. More details are avaialable in readme.
 -A more effective way would be to train individual model per class
 -Seq2Seq Learning with scheduled training has been used in prediction
 '''
-#%% 3.0.1 Load clean data
 x, y_labels = datasets.data_reader.read_clean_dataset(summary=True)
 y = datasets.data_reader.one_hot(y_labels)
 x_train, y_train, x_test, y_test = train_test_split(x, y)
-#%% 3.0.2 Some Data Analysis on clean data
- # from libraries import data_analysis # Please check the file for further details
+#%% 3.0.2 Some Data Analysis on corrupt data
+# from libraries import data_analysis # Please check the file for further details
 #%% 3.1.1 Training Model for time-series prediction using Seq2Seq RNN Model with Scheduled Training
 from models.ts_prediction.ts_seq2seq import Configure_Seq2Seq, Seq2Seq_tf
 # Create Model/ Load Model
