@@ -11,6 +11,7 @@ References:
 
 Good Reading:
 [1] https://machinelearningmastery.com/cnn-long-short-term-memory-networks/
+[2] https://stackoverflow.com/questions/37098546/difference-between-variable-and-get-variable-in-tensorflow
 """
 import os, numpy as np
 import tensorflow as tf
@@ -51,32 +52,58 @@ class FC_RNN_tf(object):
             self.training = tf.placeholder(tf.bool) # True: training phase, False: testing/inference phase
             self.x_ = tf.placeholder(tf.float32, shape=[None,None,self.configure.n_features]) # [batch_size,n_timesteps,n_features]
             self.y_ = tf.placeholder(tf.float32, shape=[None,self.configure.n_classes]) # [batch_size,n_classes]
+        self.weights_initializer = tf.contrib.layers.xavier_initializer();
+        '''
         # Batch Normalization can be performed to alleviate the pain of slow learning due to bad normalization
         # fil_a_b_c implies a:cnn_layer, b=kernel_size, c=n^th_level; similar termilology for out_a_b_c
-        with tf.variable_scope('cnn_layers_1'): # [batch_size, n_timesteps, 1] --> [batch_size, n_timesteps/2, n_filters_1]
-            [fil_1_3_1, fil_1_3_2, fil_1_5_1, fil_1_7_1] = [8,16,8,8]
-            out_1_3_1 = tf.layers.conv1d(inputs=self.x_, filters=fil_1_3_1, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_1_3_1')
-            out_1_3_2 = tf.layers.conv1d(inputs=out_1_3_1, filters=fil_1_3_2, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_1_3_2')
-            out_1_5_1 = tf.layers.conv1d(inputs=self.x_, filters=fil_1_5_1, kernel_size=5, strides=1, padding='same', activation=tf.nn.relu, name='out_1_5_1')
-            out_1_7_1 = tf.layers.conv1d(inputs=self.x_, filters=fil_1_7_1, kernel_size=7, strides=1, padding='same', activation=tf.nn.relu, name='out_1_7_1')
-            out_1   = tf.concat([out_1_3_2,out_1_5_1,out_1_7_1], axis=-1, name='out_1') # [batch_size, n_timesteps, n_filters_1]
-            pool_1 = tf.layers.max_pooling1d(inputs=out_1, pool_size=2, strides=2, padding='same', name='max_pool_1') # [batch_size, n_timesteps/2, n_filters_1]
-        with tf.variable_scope('cnn_layers_2'): # [batch_size, n_timesteps/2, n_filters_1] --> [batch_size, n_timesteps/4, n_filters_2]
-            [fil_2_3_1, fil_2_3_2, fil_2_5_1, fil_2_7_1] = [32,32,8,4]
-            out_2_3_1 = tf.layers.conv1d(inputs=pool_1, filters=fil_2_3_1, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_2_3_1')
-            out_2_3_2 = tf.layers.conv1d(inputs=out_2_3_1, filters=fil_2_3_2, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_2_3_2')
-            out_2_5_1 = tf.layers.conv1d(inputs=pool_1, filters=fil_2_5_1, kernel_size=5, strides=1, padding='same', activation=tf.nn.relu, name='out_2_5_1')
-            out_2_7_1 = tf.layers.conv1d(inputs=pool_1, filters=fil_2_7_1, kernel_size=7, strides=1, padding='same', activation=tf.nn.relu, name='out_2_7_1')
-            out_2   = tf.concat([out_2_3_2,out_2_5_1,out_2_7_1], axis=-1, name='out_2') # [batch_size, n_timesteps/2, n_filters_2]
-            pool_2 = tf.layers.max_pooling1d(inputs=out_2, pool_size=2, strides=2, padding='same', name='max_pool_2') # [batch_size, n_timesteps/4, n_filters_2]
-        with tf.variable_scope('cnn_layers_3'): # [batch_size, n_timesteps/4, n_filters_2] --> [batch_size, n_timesteps/8, n_filters_3]
-            [fil_3_3_1, fil_3_3_2, fil_3_1_1] = [64,64,32] # 1-stride convolution
-            out_3_3_1 = tf.layers.conv1d(inputs=pool_2, filters=fil_3_3_1, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_3_3_1')
-            out_3_3_2 = tf.layers.conv1d(inputs=out_3_3_1, filters=fil_3_3_2, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_3_3_2')
-            out_3_1_1 = tf.layers.conv1d(inputs=out_3_3_2, filters=fil_3_1_1, kernel_size=1, strides=1, padding='same', activation=tf.nn.relu, name='out_3_1_1')
-            pool_3 = tf.layers.max_pooling1d(inputs=out_3_1_1, pool_size=2, strides=2, padding='same', name='max_pool_3') # [batch_size, n_timesteps/8, n_filters_3]
+        '''
+        # Conv Layer 1
+        conv_1_input = self.x_;
+        in_channels = self.configure.n_features;
+        [fil_1_3_1, fil_1_3_2, fil_1_5_1, fil_1_7_1] = [8,16,8,8]
+        with tf.variable_scope('cnn_layers_1_3'):
+            w_1_3_1 = tf.get_variable("w_1_3_1", shape=[3, in_channels, fil_1_3_1], initializer=self.weights_initializer);
+            b_1_3_1 = self.init_bias([fil_1_3_1], 'b_1_3_1')
+            conv_1_3_1 = tf.nn.conv1d(conv_1_input, w_1_3_1, stride=1, padding='SAME', data_format='NWC') + b_1_3_1;
+            w_1_3_2 = tf.get_variable("w_1_3_2", shape=[3, fil_1_3_1, fil_1_3_2], initializer=self.weights_initializer);
+            b_1_3_2 = self.init_bias([fil_1_3_2], 'b_1_3_2')
+            conv_1_3_2 = tf.nn.conv1d(conv_1_3_1, w_1_3_2, stride=1, padding='SAME', data_format='NWC') + b_1_3_2;
+        with tf.variable_scope('cnn_layers_1_5'):
+            w_1_5_1 = tf.get_variable("w_1_5_1", shape=[5, in_channels, fil_1_5_1], initializer=self.weights_initializer);
+            b_1_5_1 = self.init_bias([fil_1_5_1], 'b_1_5_1')
+            conv_1_5_1 = tf.nn.conv1d(conv_1_input, w_1_5_1, stride=1, padding='SAME', data_format='NWC') + b_1_5_1;
+        with tf.variable_scope('cnn_layers_1_7'):
+            w_1_7_1 = tf.get_variable("w_1_7_1", shape=[3, in_channels, fil_1_7_1], initializer=self.weights_initializer);
+            b_1_7_1 = self.init_bias([fil_1_7_1], 'b_1_7_1')
+            conv_1_7_1 = tf.nn.conv1d(conv_1_input, w_1_7_1, stride=1, padding='SAME', data_format='NWC') + b_1_7_1;
+        conv_1_output   = tf.concat([conv_1_3_2,conv_1_5_1,conv_1_7_1], axis=-1, name='conv_1_output') # [batch_size, n_timesteps, n_filters_1]
+        conv_1_output_pool = tf.layers.max_pooling1d(inputs=conv_1_output, pool_size=2, strides=2, padding='same', name='conv_1_output_pool') # [batch_size, n_timesteps/2, n_filters_1]
+        # Conv Layer 2
+        conv_2_input = conv_1_output_pool;
+        in_channels = fil_1_3_2+fil_1_5_1+fil_1_7_1;
+        [fil_2_3_1, fil_2_3_2] = [64,64]
+        with tf.variable_scope('cnn_layers_2_3'):
+            w_2_3_1 = tf.get_variable("w_2_3_1", shape=[3, in_channels, fil_2_3_1], initializer=self.weights_initializer);
+            b_2_3_1 = self.init_bias([fil_2_3_1], 'b_2_3_1')
+            conv_2_3_1 = tf.nn.conv1d(conv_2_input, w_2_3_1, stride=1, padding='SAME', data_format='NWC') + b_2_3_1;
+            w_2_3_2 = tf.get_variable("w_2_3_2", shape=[3, fil_2_3_1, fil_2_3_2], initializer=self.weights_initializer);
+            b_2_3_2 = self.init_bias([fil_2_3_2], 'b_2_3_2')
+            conv_2_3_2 = tf.nn.conv1d(conv_2_3_1, w_2_3_2, stride=1, padding='SAME', data_format='NWC') + b_2_3_2;
+        conv_2_output = conv_2_3_2;
+        conv_2_output_pool = tf.layers.max_pooling1d(inputs=conv_2_output, pool_size=2, strides=2, padding='same', name='conv_2_output_pool') # [batch_size, n_timesteps/4, n_filters_1]
+        # Conv Layer 2
+        conv_3_input = conv_2_output_pool;
+        in_channels = fil_2_3_2;
+        [fil_3_3_1] = [128]
+        with tf.variable_scope('cnn_layers_3_3'):
+            w_3_3_1 = tf.get_variable("w_3_3_1", shape=[3, in_channels, fil_3_3_1], initializer=self.weights_initializer);
+            b_3_3_1 = self.init_bias([fil_3_3_1], 'b_3_3_1')
+            conv_3_3_1 = tf.nn.conv1d(conv_3_input, w_3_3_1, stride=1, padding='SAME', data_format='NWC') + b_3_3_1;
+        conv_3_output = conv_3_3_1;
+        conv_3_output_pool = tf.layers.max_pooling1d(inputs=conv_3_output, pool_size=2, strides=2, padding='same', name='conv_3_output_pool') # [batch_size, n_timesteps/8, n_filters_1]
+        # To RNN and beyond
         with tf.variable_scope('cnn_output'):
-            self.cnn_output = pool_3; # [batch_size,n_timesteps,n_features]==[batch_size,58,20]
+            self.cnn_output = conv_3_output_pool; # [batch_size,n_timesteps/8,n_features_final]
         with tf.variable_scope('multi_rnn_layers'):
             with tf.variable_scope('forward'):
                 rnn_cells_forward = [tf.nn.rnn_cell.BasicLSTMCell(num_units=n, activation=self.configure.state_activation) for n in self.configure.rnn_units]
@@ -111,6 +138,8 @@ class FC_RNN_tf(object):
             # 4. Update weights and biases i.e trainable parameters
             self.update_step = tf.train.AdamOptimizer(self.lr).apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
             #self.update_step = tf.train.RMSPropOptimizer(self.lr).apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
+    def init_bias(self, shape, name):
+        return tf.Variable(tf.constant(0.0, shape = shape), name=name)
     def make_data_for_batch_training_FC_RNN(self, x_data, y_data):
         # Inputs:: x_data:[n_samples,n_timesteps,n_features] y_data:[n_samples,n_classes]
         # Outputs:: x_data_new:[n_batches,batch_size,n_timesteps,n_features] y_data_new:[n_batches,batch_size,n_classes]
@@ -126,3 +155,27 @@ class FC_RNN_tf(object):
         x_data_new = np.stack(x_data_new);
         y_data_new = np.stack(y_data_new);
         return x_data_new, y_data_new
+
+
+#        with tf.variable_scope('cnn_layers_1'): # [batch_size, n_timesteps, 1] --> [batch_size, n_timesteps/2, n_filters_1]
+#            [fil_1_3_1, fil_1_3_2, fil_1_5_1, fil_1_7_1] = [8,16,8,8]
+#            out_1_3_1 = tf.layers.conv1d(inputs=self.x_, filters=fil_1_3_1, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_1_3_1')
+#            out_1_3_2 = tf.layers.conv1d(inputs=out_1_3_1, filters=fil_1_3_2, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_1_3_2')
+#            out_1_5_1 = tf.layers.conv1d(inputs=self.x_, filters=fil_1_5_1, kernel_size=5, strides=1, padding='same', activation=tf.nn.relu, name='out_1_5_1')
+#            out_1_7_1 = tf.layers.conv1d(inputs=self.x_, filters=fil_1_7_1, kernel_size=7, strides=1, padding='same', activation=tf.nn.relu, name='out_1_7_1')
+#            out_1   = tf.concat([out_1_3_2,out_1_5_1,out_1_7_1], axis=-1, name='out_1') # [batch_size, n_timesteps, n_filters_1]
+#            pool_1 = tf.layers.max_pooling1d(inputs=out_1, pool_size=2, strides=2, padding='same', name='max_pool_1') # [batch_size, n_timesteps/2, n_filters_1]
+#        with tf.variable_scope('cnn_layers_2'): # [batch_size, n_timesteps/2, n_filters_1] --> [batch_size, n_timesteps/4, n_filters_2]
+#            [fil_2_3_1, fil_2_3_2, fil_2_5_1, fil_2_7_1] = [32,32,8,4]
+#            out_2_3_1 = tf.layers.conv1d(inputs=pool_1, filters=fil_2_3_1, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_2_3_1')
+#            out_2_3_2 = tf.layers.conv1d(inputs=out_2_3_1, filters=fil_2_3_2, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_2_3_2')
+#            out_2_5_1 = tf.layers.conv1d(inputs=pool_1, filters=fil_2_5_1, kernel_size=5, strides=1, padding='same', activation=tf.nn.relu, name='out_2_5_1')
+#            out_2_7_1 = tf.layers.conv1d(inputs=pool_1, filters=fil_2_7_1, kernel_size=7, strides=1, padding='same', activation=tf.nn.relu, name='out_2_7_1')
+#            out_2   = tf.concat([out_2_3_2,out_2_5_1,out_2_7_1], axis=-1, name='out_2') # [batch_size, n_timesteps/2, n_filters_2]
+#            pool_2 = tf.layers.max_pooling1d(inputs=out_2, pool_size=2, strides=2, padding='same', name='max_pool_2') # [batch_size, n_timesteps/4, n_filters_2]
+#        with tf.variable_scope('cnn_layers_3'): # [batch_size, n_timesteps/4, n_filters_2] --> [batch_size, n_timesteps/8, n_filters_3]
+#            [fil_3_3_1, fil_3_3_2, fil_3_1_1] = [64,64,32] # 1-stride convolution
+#            out_3_3_1 = tf.layers.conv1d(inputs=pool_2, filters=fil_3_3_1, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_3_3_1')
+#            out_3_3_2 = tf.layers.conv1d(inputs=out_3_3_1, filters=fil_3_3_2, kernel_size=3, strides=1, padding='same', activation=tf.nn.relu, name='out_3_3_2')
+#            out_3_1_1 = tf.layers.conv1d(inputs=out_3_3_2, filters=fil_3_1_1, kernel_size=1, strides=1, padding='same', activation=tf.nn.relu, name='out_3_1_1')
+#            pool_3 = tf.layers.max_pooling1d(inputs=out_3_1_1, pool_size=2, strides=2, padding='same', name='max_pool_3') # [batch_size, n_timesteps/8, n_filters_3]
