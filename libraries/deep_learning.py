@@ -224,9 +224,9 @@ ax[0].hist(x_train_my_c_len,bins=10); ax[0].set_title('Sample Lengths: Training 
 ax[1].hist(x_test_my_c_len,bins=10); ax[1].set_title('Sample Lengths: Test Data'); ax[1].grid();
 del mean, std, i, sampled_len, start_ind, end_ind, fig, ax
 #%% 2.1 Load the classification model and classify samples
-c_data = x_c #x_train_my_c; #x_test_my_c; #x_c;
-c_labels = np.zeros([c_data.shape[0],10]) #y_train; #y_test; #np.zeros([c_data.shape[0],10]);
-c_len = x_c_len #x_train_my_c_len; #x_test_my_c_len; #x_c_len;
+c_data = x_train_my_c #x_train_my_c; #x_test_my_c; #x_c;
+c_labels = y_train #y_train; #y_test; #np.zeros([c_data.shape[0],10]);
+c_len = x_train_my_c_len #x_train_my_c_len; #x_test_my_c_len; #x_c_len;
 #%% 2.1.2 Classification using MLP Model
 # Load Model
 tf.reset_default_graph();
