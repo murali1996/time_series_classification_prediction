@@ -6,7 +6,8 @@ import tensorflow as tf
 import numpy as np
 
 def categorical_crossentropy(y_true, y_pred):
-    loss = tf.nn.softmax_cross_entropy_with_logits(labels=y_true,logits=y_pred)
+    # DEPRECATED WARNING! loss = tf.nn.softmax_cross_entropy_with_logits(labels=y_true,logits=y_pred)
+    loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=y_true,logits=y_pred)
     return loss
 # Using only basic tensorflow ops, implement the following functions
 # TODO: cosine distance

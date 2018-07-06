@@ -9,12 +9,11 @@ Good Reading:
 [1] https://burakhimmetoglu.com/2017/08/22/time-series-classification-with-tensorflow/
 [2] https://blog.cardiogr.am/applying-artificial-intelligence-in-medicine-our-early-results-78bfe7605d32
 ---
-"""
 #%% PART 1
 # TODO:
 # 1. Implement some custom objectives:
 #    cross-entropy (done), cosine distance, regression error, hinge loss
-# 2. Implement network architectures:
+# 2. Implement different network architectures to the task of time series classification
 #    MLP (done), RNN, CNN, etc.
 # 3. Train a classifier for time-series classification task
 #%% PART 2
@@ -26,68 +25,80 @@ Good Reading:
 # 1. Predict the next 25 samples for each data point in D_corrupt.
 #    Include the results as a shape = (30000,25)
 #    Numpy array named corrupt_prediction.npz.
-
-
+"""
 #%% Libraries
 # Custom
 import datasets.data_reader
 from libraries.helpers import train_test_split, progressBar, progressBarSimple
+from libraries import data_analysis
 # Main
 import numpy as np, os, dill
 from matplotlib import pyplot as plt
 import tensorflow as tf
 
 
-#%% 1.0 Data Analysis
-# 1.0.1 Load clean data
-x, y_labels = datasets.data_reader.read_clean_dataset(summary=True)
+#%% 1.1 Load clean data and do data analysis
+x, y_labels = datasets.data_reader.read_clean_dataset(summary=False)
 y = datasets.data_reader.one_hot(y_labels)
 x_train, y_train, x_test, y_test = train_test_split(x, y, train_fraction=0.8)
-# 1.0.2 Some Data Analysis on clean data
-from libraries import data_analysis # Please check the file for further details
-#%% 1.1 Write custom functions
-from libraries import losses # Please check the file for further details
-#%% 1.2 Time-Series Classification with Deep Learning
+# visit data_analysis.py file for data analysis
+#%% 1.2 Time-Series Classification with Deep Learning. Select one among [1.2.1, 1.2.2, 1.2.3, 1.2.4]
 #%% 1.2.1 MLP for time-series classification using tensorflow library #<Implemenetation in Keras already provided>
 from models.ts_classification.ts_mlp import Configure_MLP, MLP_tf
-# Create Model/ Load Model
+# Configure Params
 configure = Configure_MLP();
 configure.custom_loss = 'categorical_crossentropy' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
 configure.create_folders_();
-model = MLP_tf(configure);
+# tf graph and connections
+tf.reset_default_graph();
+g_mlp  = tf.Graph();
+with g_mlp.as_default():
+    model = MLP_tf(configure);
 # Make data compatible with the architecture defined; function available in model class itself
 x_train_, x_test_ = x_train.copy(), x_test.copy();
 x_train_, y_train_ = model.make_data_for_batch_training_MLP(x_train_, y_train)
 x_test_, y_test_ = model.make_data_for_batch_training_MLP(x_test_, y_test)
 #%% 1.2.2 RNN for Time-Series Classification using tensorflow library
 from models.ts_classification.ts_rnn import Configure_RNN, RNN_tf
-# Create Model/ Load Model
+# Configure Params
 configure = Configure_RNN();
 configure.custom_loss = 'cosine_distance' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
 configure.create_folders_();
-model = RNN_tf(configure);
+# tf graph and connections
+tf.reset_default_graph();
+g_rnn  = tf.Graph();
+with g_rnn.as_default():
+    model = RNN_tf(configure);
 # Make data compatible with the architecture defined; function available in model class itself
 x_train_, x_test_ = np.expand_dims(x_train,axis=-1), np.expand_dims(x_test,axis=-1);
 x_train_, y_train_ = model.make_data_for_batch_training_RNN(x_train_, y_train)
 x_test_, y_test_ = model.make_data_for_batch_training_RNN(x_test_, y_test)
 #%% 1.2.3 CNN for Time-Series Classification using tensorflow library
 from models.ts_classification.ts_cnn import Configure_CNN, CNN_tf
-# Create Model/ Load Model
+# Configure Params
 configure = Configure_CNN();
 configure.custom_loss = 'categorical_crossentropy' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
 configure.create_folders_();
-model = CNN_tf(configure);
+# tf graph and connections
+tf.reset_default_graph();
+g_cnn  = tf.Graph();
+with g_cnn.as_default():
+    model = CNN_tf(configure);
 # Make data compatible with the architecture defined; function available in model class itself
 x_train_, x_test_ = np.expand_dims(x_train,axis=-1), np.expand_dims(x_test,axis=-1);
 x_train_, y_train_ = model.make_data_for_batch_training_CNN(x_train_, y_train)
 x_test_, y_test_ = model.make_data_for_batch_training_CNN(x_test_, y_test)
 #%% 1.2.4 FC_RNN for Time-Series Classification using tensorflow library
 from models.ts_classification.ts_fc_rnn import Configure_FC_RNN, FC_RNN_tf
-# Create Model/ Load Model
+# Configure Params
 configure = Configure_FC_RNN();
 configure.custom_loss = 'categorical_crossentropy' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
 configure.create_folders_();
-model = FC_RNN_tf(configure);
+# tf graph and connections
+tf.reset_default_graph();
+g_fc_rnn  = tf.Graph();
+with g_fc_rnn.as_default():
+    model = FC_RNN_tf(configure);
 # Make data compatible with the architecture defined; function available in model class itself
 x_train_, x_test_ = np.expand_dims(x_train,axis=-1), np.expand_dims(x_test,axis=-1);
 x_train_, y_train_ = model.make_data_for_batch_training_FC_RNN(x_train_, y_train)
@@ -99,35 +110,36 @@ Notes
    can be easily modified by setting them through model.configure.*
    For ease of implementation, all such parameters are pre-set in the respective configure files
 '''
-# Set Configuration
-model.configure.batch_size = 128;
+# Set Configuration: To set parameter initializations, visit models.ts_classification.global_params.py
+model.configure.batch_size = 64;
+model.configure.n_epochs = 200;
 model.configure.n_timesteps = x.shape[-1];
 model.configure.n_features = 1;
 model.configure.n_classes = y.shape[-1];
-model.configure.n_epochs
 # Save current configuration
 with open(model.configure.configure_save_path, 'wb') as opfile:
     dill.dump(configure, opfile)
     opfile.close()
 # Training and Inference of the model with current configuration
 test_every, start_epoch = 1, 0; # Define when to do testing and also set the starting epoch
-if start_epoch==0: # Useful when restarting the training from an earlier stopped training phase
-    train_loss_, train_loss_min, train_loss_min_epoch = [], np.inf, 0;
-    train_acc_, train_acc_max, train_acc_max_epoch = [], -np.inf, 0;
-    test_loss_, test_loss_min, test_loss_min_epoch = [], np.inf, 0;
-    test_acc_, test_acc_max, test_acc_max_epoch = [], -np.inf, 0;
-with tf.Session() as sess:
+with tf.Session(graph = g_cnn) as sess:
     # Initialize log writer and saver for this session and add current graph to tensorboard
     saver = tf.train.Saver() # Saving Variables and Constants
     writer = tf.summary.FileWriter(model.configure.tf_logs);  # Tensorboard
     writer.add_graph(sess.graph);
     # Initialize or load the (best) Model so far; Useful for restarting training
-    if start_epoch!=0:
+    if start_epoch==0:
+        train_loss_, train_loss_min, train_loss_min_epoch = [], np.inf, 0;
+        train_acc_, train_acc_max, train_acc_max_epoch = [], -np.inf, 0;
+        test_loss_, test_loss_min, test_loss_min_epoch = [], np.inf, 0;
+        test_acc_, test_acc_max, test_acc_max_epoch = [], -np.inf, 0;
+        tf.global_variables_initializer().run()
+    else:
         saved_path = os.path.join(model.configure.model_save_inference, "model.ckpt")
         saver.restore(sess, saved_path); print("Model restored from path: {}".format(saved_path))
-    else:
-        tf.global_variables_initializer().run()
-    # Initialize global variables and save the best models as you go training
+        train_loss_, test_loss_ = train_loss_.to_list(), test_loss_.tolist();
+        train_acc_, test_acc_ = train_acc_.tolist(), test_acc_.tolist();
+    # Training for loss optimization and saving the best models
     # Early Stopping is available with patience
     for epoch in range(start_epoch, model.configure.n_epochs):
         print('EPOCH: {}'.format(epoch));
@@ -141,7 +153,7 @@ with tf.Session() as sess:
             accuracy+=result[2];
         train_loss/=x_train_.shape[0]; accuracy/=x_train_.shape[0];
         train_loss_.append(train_loss); train_acc_.append(accuracy)
-        print('\n');print('Epoch: {}, Training: Avg. Loss: {:.4f} and Avg. Accuarcy: {:.4f}'.format(epoch,train_loss,accuracy));
+        print('\n Epoch: {}, Training: Avg. Loss: {:.4f} and Avg. Accuarcy: {:.4f}'.format(epoch,train_loss,accuracy));
         # Validation
         if epoch%test_every==0:
             test_loss, accuracy = 0, 0;
@@ -153,7 +165,7 @@ with tf.Session() as sess:
                 accuracy+=result[1];
             test_loss/=x_test_.shape[0]; accuracy/=x_test_.shape[0];
             test_loss_.append(test_loss); test_acc_.append(accuracy)
-            print('\n'); print('Epoch: {}, Testing: Avg. Loss: {:.4f} and Avg. Accuarcy: {:.4f}'.format(epoch,test_loss,accuracy))
+            print('\n Epoch: {}, Testing: Avg. Loss: {:.4f} and Avg. Accuarcy: {:.4f}'.format(epoch,test_loss,accuracy))
         # Model Saving/ Record data/ Tensorboard Writer
         if True:
             # Save variables and tensors to file
@@ -205,7 +217,7 @@ x_c, x_c_len = datasets.data_reader.read_corrupted_dataset(summary=True)
 x, y_labels = datasets.data_reader.read_clean_dataset(summary=True)
 y = datasets.data_reader.one_hot(y_labels)
 x_train, y_train, x_test, y_test = train_test_split(x, y, train_fraction=0.8)
-# 2.0.3 Corrupt Clean data
+# 2.0.3 Now Corrupt the Clean data
 mean, std = np.mean(x_c_len), np.std(x_c_len);
 x_train_my_c, x_test_my_c = x_train.copy(), x_test.copy();
 x_train_my_c_len, x_test_my_c_len = np.zeros(len(x_train_my_c)).astype('int32'), np.zeros(len(x_test_my_c)).astype('int32');
@@ -236,11 +248,15 @@ with open(config_file_path, 'rb') as opfile:
     configure = dill.load(opfile)
     opfile.close()
 print(configure.custom_loss);
-model = MLP_tf(configure);
+# tf graph and connections
+tf.reset_default_graph();
+g_mlp  = tf.Graph();
+with g_mlp.as_default():
+    model = MLP_tf(configure);
 # Make data compatible with the model
   # Data shapes already compatible
 # Infer sample by sample by sending as [batch_size,457] dimensional input because this is MLP and we have to send fixed length
-with tf.Session() as sess:
+with tf.Session(graph=g_mlp) as sess:
     # Restore variables from disk.
     saver = tf.train.Saver() # To restore Variables and Constants
     saved_path = os.path.join(configure.model_save_inference, "model.ckpt")
@@ -266,11 +282,15 @@ with open(config_file_path, 'rb') as opfile:
     configure = dill.load(opfile)
     opfile.close()
 print(configure.custom_loss);
-model = RNN_tf(configure);
+# tf graph and connections
+tf.reset_default_graph();
+g_rnn  = tf.Graph();
+with g_rnn.as_default():
+    model = RNN_tf(configure);
 # Make data compatible with the model
 x_c_expanded = np.expand_dims(c_data,axis=-1)
 # Infer sample by sample by sending as [1,x_c_len,1] dimensional input because this is RNN and we have variable lengths
-with tf.Session() as sess:
+with tf.Session(graph=g_rnn) as sess:
     # Restore variables from disk.
     saver = tf.train.Saver() # To restore Variables and Constants
     saved_path = os.path.join(configure.model_save_inference, "model.ckpt")
@@ -289,22 +309,26 @@ if model.configure.custom_loss=='categorical_crossentropy':
     predictions_RNN = b; del a, b;
 #%% 2.1.3 Classification using CNN Model
 # Load Model
-tf.reset_default_graph();
 from models.ts_classification.ts_cnn import Configure_CNN, CNN_tf
-config_file_path = './logs/ts_classification/cnn_tf_cosine_distance/model_configs'
+config_file_path = './logs/ts_classification/cnn_tf_categorical_crossentropy/model_configs'
 with open(config_file_path, 'rb') as opfile:
     configure = dill.load(opfile)
     opfile.close()
 print(configure.custom_loss);
-model = CNN_tf(configure);
+# tf graph and connections
+tf.reset_default_graph();
+g_cnn = tf.Graph();
+with g_cnn.as_default():
+    model = CNN_tf(configure);
 # Make data compatible with the model
 x_c_expanded = np.expand_dims(c_data,axis=-1)
 # Infer sample by sample by sending as [1,457,1] dimensional input because the CNN should be fed with full dimension as in training because of dense layers
-with tf.Session() as sess:
+with tf.Session(graph=g_cnn) as sess:
     # Restore variables from disk.
     saver = tf.train.Saver() # To restore Variables and Constants
     saved_path = os.path.join(configure.model_save_inference, "model.ckpt")
     saver.restore(sess, saved_path); print("Model restored from path: {}".format(saved_path))
+    #print(sess.run([model.global_step])[0])
     predictions, accuracy = [], [];
     for i in range(c_data.shape[0]):
         progressBarSimple(i,c_data.shape[0]);
@@ -326,11 +350,15 @@ with open(config_file_path, 'rb') as opfile:
     configure = dill.load(opfile)
     opfile.close()
 print(configure.custom_loss);
-model = FC_RNN_tf(configure);
+# tf graph and connections
+tf.reset_default_graph();
+g_fc_rnn  = tf.Graph();
+with g_fc_rnn.as_default():
+    model = FC_RNN_tf(configure);
 # Make data compatible with the model
 x_c_expanded = np.expand_dims(c_data,axis=-1)
 # Infer sample by sample by sending as [1,x_c_len,1] dimensional input because this is FC_RNN and we have variable lengths
-with tf.Session() as sess:
+with tf.Session(graph=g_fc_rnn) as sess:
     # Restore variables from disk.
     saver = tf.train.Saver() # To restore Variables and Constants
     saved_path = os.path.join(configure.model_save_inference, "model.ckpt")

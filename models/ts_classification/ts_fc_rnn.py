@@ -15,26 +15,46 @@ Good Reading:
 """
 import os, numpy as np
 import tensorflow as tf
+
 from libraries import losses
+from models.ts_classification.global_params import global_params
 
 class Configure_FC_RNN(object):
     def __init__(self):
-        # Architecture (CNN layers + RNN Layers + Dense layers)
-        self.rnn_units, self.state_activation, self.keep_prob_rnn = [128, 128], tf.nn.tanh, 0.8;
-        self.dense_layer_units, self.dense_activation, self.last_activation, self.dropout_rates = [128, 64], tf.nn.relu, tf.nn.relu, [0.1, 0.1];
-        assert(len(self.dense_layer_units)==len(self.dropout_rates))
-        self.custom_loss = 'categorical_crossentropy' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
+        # Architecture Parameters (CNN layers + RNN Layers + Dense layers)
+        self.rnn_units = [128, 128];
+        self.state_activation = tf.nn.tanh;
+        self.keep_prob_rnn = 0.8;
+        self.dense_layer_units = [128, 64];
+        self.dropout_rates = [0.1, 0.1];
+        self.dense_activation = tf.nn.relu;
+        self.last_activation = None;
+        # Load global (initialized) parameters
+        gp = global_params();
+        # Training and optimization
+        self.batch_size = gp.batch_size;
+        self.n_timesteps = gp.n_timesteps;
+        self.n_features = gp.n_features;
+        self.n_classes = gp.n_classes;
+        self.max_gradient_norm = gp.max_gradient_norm;
+        self.learning_rate = gp.learning_rate;
+        self.n_epochs = gp.n_epochs;
+        self.patience = gp.patience;
+        self.parent_folder = gp.parent_folder;
+        self.custom_loss = gp.loss_function;
+        # last_activation
         if self.custom_loss=='categorical_crossentropy':
-            self.last_activation = tf.nn.relu; # Or self.last_activation = None;
+            self.last_activation = tf.nn.relu;
         elif self.custom_loss=='cosine_distance' or self.custom_loss=='regression_error':
             self.last_activation = tf.nn.sigmoid;
-        # Training and optimization
-        self.batch_size, self.n_timesteps, self.n_features, self.n_classes = 128, 457, 1, 10;
-        self.max_gradient_norm, self.learning_rate = 5, 0.001;
-        self.n_epochs, self.patience = 200, 50; # Patience: epochs (with no loss improvement) until before terminating the training process
-    def create_folders_(self):
-        # Directories, Sub-directories, Paths
-        self.main_dir = './logs/ts_classification';
+        # Validate
+        self.validate_();
+    def validate_(self):
+        assert(len(self.dense_layer_units)==len(self.dropout_rates))
+        assert(self.last_activation!=None)
+    def create_folders_(self): # Directories, Sub-directories, Paths
+        print('parent Folder set as: {} If needed, please change it relative to you current path'.format(self.parent_folder))
+        self.main_dir = os.path.join(self.parent_folder, 'logs', 'ts_classification');
         self.model_dir = os.path.join(self.main_dir, 'fc_rnn_tf_'+self.custom_loss);
         self.model_save_training = os.path.join(self.model_dir, 'train_best');
         self.model_save_inference = os.path.join(self.model_dir, 'infer_best');
@@ -52,11 +72,10 @@ class FC_RNN_tf(object):
             self.training = tf.placeholder(tf.bool) # True: training phase, False: testing/inference phase
             self.x_ = tf.placeholder(tf.float32, shape=[None,None,self.configure.n_features]) # [batch_size,n_timesteps,n_features]
             self.y_ = tf.placeholder(tf.float32, shape=[None,self.configure.n_classes]) # [batch_size,n_classes]
-        self.weights_initializer = tf.contrib.layers.xavier_initializer();
         '''
-        # Batch Normalization can be performed to alleviate the pain of slow learning due to bad normalization
         # fil_a_b_c implies a:cnn_layer, b=kernel_size, c=n^th_level; similar termilology for out_a_b_c
         '''
+        self.weights_initializer = tf.contrib.layers.xavier_initializer();
         # Conv Layer 1
         conv_1_input = self.x_;
         in_channels = self.configure.n_features;
@@ -90,8 +109,8 @@ class FC_RNN_tf(object):
             b_2_3_2 = self.init_bias([fil_2_3_2], 'b_2_3_2')
             conv_2_3_2 = tf.nn.conv1d(conv_2_3_1, w_2_3_2, stride=1, padding='SAME', data_format='NWC') + b_2_3_2;
         conv_2_output = conv_2_3_2;
-        conv_2_output_pool = tf.layers.max_pooling1d(inputs=conv_2_output, pool_size=2, strides=2, padding='same', name='conv_2_output_pool') # [batch_size, n_timesteps/4, n_filters_1]
-        # Conv Layer 2
+        conv_2_output_pool = tf.layers.max_pooling1d(inputs=conv_2_output, pool_size=2, strides=2, padding='same', name='conv_2_output_pool') # [batch_size, n_timesteps/4, n_filters_2]
+        # Conv Layer 3
         conv_3_input = conv_2_output_pool;
         in_channels = fil_2_3_2;
         [fil_3_3_1] = [128]
@@ -100,7 +119,7 @@ class FC_RNN_tf(object):
             b_3_3_1 = self.init_bias([fil_3_3_1], 'b_3_3_1')
             conv_3_3_1 = tf.nn.conv1d(conv_3_input, w_3_3_1, stride=1, padding='SAME', data_format='NWC') + b_3_3_1;
         conv_3_output = conv_3_3_1;
-        conv_3_output_pool = tf.layers.max_pooling1d(inputs=conv_3_output, pool_size=2, strides=2, padding='same', name='conv_3_output_pool') # [batch_size, n_timesteps/8, n_filters_1]
+        conv_3_output_pool = tf.layers.max_pooling1d(inputs=conv_3_output, pool_size=2, strides=2, padding='same', name='conv_3_output_pool') # [batch_size, n_timesteps/8, n_filters_3]
         # To RNN and beyond
         with tf.variable_scope('cnn_output'):
             self.cnn_output = conv_3_output_pool; # [batch_size,n_timesteps/8,n_features_final]
@@ -116,8 +135,8 @@ class FC_RNN_tf(object):
                 rnn_stack_backward = tf.nn.rnn_cell.MultiRNNCell(rnn_cells_backward)
                 #rnn_stack_backward = tf.contrib.rnn.DropoutWrapper(rnn_stack_backward, output_keep_prob=self.configure.keep_prob_rnn)
                 outputs_backward, state_backward = tf.nn.dynamic_rnn(rnn_stack_backward, x_backward_, dtype = tf.float32)
-            self.output = tf.concat([outputs_forward[:,-1,:],outputs_backward[:,-1,:]],axis=-1) # [batch_size,2*self.configure.rnn_units[-1]]
-        output_ = self.output;
+            self.rnn_output = tf.concat([outputs_forward[:,-1,:],outputs_backward[:,-1,:]],axis=-1) # [batch_size,2*self.configure.rnn_units[-1]]
+        output_ = self.rnn_output;
         with tf.variable_scope('multi_dense_layers'):
             for i, units in enumerate(self.configure.dense_layer_units):
                 output_ = tf.layers.dense(inputs=output_, units=units, activation=self.configure.dense_activation, name='dense_{}'.format(i))
@@ -132,7 +151,7 @@ class FC_RNN_tf(object):
             gradients = tf.gradients(self.loss, params)
             clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.configure.max_gradient_norm)
             # 3. Set learning Rate: Exponential Decay or a constant value
-            self.global_step = tf.Variable(0, trainable=False) # global_step just keeps track of the number of batches seen so far
+            self.global_step = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step') # global_step just keeps track of the number of batches seen so far
             #self.lr = tf.train.exponential_decay(self.configure.learning_rate, self.global_step, self.configure.max_global_steps_assumed, 0.1)
             self.lr = self.configure.learning_rate;
             # 4. Update weights and biases i.e trainable parameters

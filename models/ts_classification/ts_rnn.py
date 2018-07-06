@@ -7,26 +7,46 @@ RNN for Time-Series Classification using tensorflow library
 """
 import os, numpy as np
 import tensorflow as tf
+
 from libraries import losses
+from models.ts_classification.global_params import global_params
 
 class Configure_RNN(object):
     def __init__(self):
-        # Architecture (RNN Layers + Dense Layers)
-        self.rnn_units, self.state_activation, self.keep_prob_rnn = [128, 128], tf.nn.tanh, 0.8;
-        self.dense_layer_units, self.dense_activation, self.last_activation, self.dropout_rates = [128, 64], tf.nn.relu, tf.nn.relu, [0.1, 0.1];
-        assert(len(self.dense_layer_units)==len(self.dropout_rates))
-        self.custom_loss = 'categorical_crossentropy' # categorical_crossentropy, cosine_distance, regression_error, hinge_loss
+        # Architecture Parameters (RNN Layers + Dense Layers)
+        self.rnn_units = [128, 128];
+        self.state_activation = tf.nn.tanh;
+        self.keep_prob_rnn = 0.8;
+        self.dense_layer_units = [128, 64];
+        self.dense_activation = tf.nn.relu;
+        self.last_activation = tf.nn.relu;
+        self.dropout_rates = [0.1, 0.1];
+        # Load global (initialized) parameters
+        gp = global_params();
+        # Training and optimization
+        self.batch_size = gp.batch_size;
+        self.n_timesteps = gp.n_timesteps;
+        self.n_features = gp.n_features;
+        self.n_classes = gp.n_classes;
+        self.max_gradient_norm = gp.max_gradient_norm;
+        self.learning_rate = gp.learning_rate;
+        self.n_epochs = gp.n_epochs;
+        self.patience = gp.patience;
+        self.parent_folder = gp.parent_folder;
+        self.custom_loss = gp.loss_function;
+        # last_activation
         if self.custom_loss=='categorical_crossentropy':
-            self.last_activation = tf.nn.relu; # Or self.last_activation = None;
+            self.last_activation = tf.nn.relu;
         elif self.custom_loss=='cosine_distance' or self.custom_loss=='regression_error':
             self.last_activation = tf.nn.sigmoid;
-        # Training and optimization
-        self.batch_size, self.n_timesteps, self.n_features, self.n_classes = 128, 457, 1, 10; # Although n_timesteps will not be used by architecture, it is kept for consistency in code
-        self.max_gradient_norm, self.learning_rate = 5, 0.001;
-        self.n_epochs, self.patience = 50, 20; # Patience: epochs (with no loss improvement) until before terminating the training process
-    def create_folders_(self):
-        # Directories, Sub-directories, Paths
-        self.main_dir = './logs/ts_classification';
+        # Validate
+        self.validate_();
+    def validate_(self):
+        assert(len(self.dense_layer_units)==len(self.dropout_rates))
+        assert(self.last_activation!=None)
+    def create_folders_(self): # Directories, Sub-directories, Paths
+        print('parent Folder set as: {} If needed, please change it relative to you current path'.format(self.parent_folder))
+        self.main_dir = os.path.join(self.parent_folder, 'logs', 'ts_classification');
         self.model_dir = os.path.join(self.main_dir, 'rnn_tf_'+self.custom_loss);
         self.model_save_training = os.path.join(self.model_dir, 'train_best')
         self.model_save_inference = os.path.join(self.model_dir, 'infer_best')
@@ -37,6 +57,7 @@ class Configure_RNN(object):
         for dir_ in dirs:
             if not os.path.exists(dir_):
                 os.mkdir(dir_)
+
 class RNN_tf(object):
     def __init__(self, configure):
         self.configure = configure;
@@ -72,7 +93,7 @@ class RNN_tf(object):
             gradients = tf.gradients(self.loss, params)
             clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.configure.max_gradient_norm)
             # 3. Set learning Rate: Exponential Decay or a constant value
-            self.global_step = tf.Variable(0, trainable=False) # global_step just keeps track of the number of batches seen so far
+            self.global_step = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step') # global_step just keeps track of the number of batches seen so far
             #self.lr = tf.train.exponential_decay(self.configure.learning_rate, self.global_step, self.configure.max_global_steps_assumed, 0.1)
             self.lr = self.configure.learning_rate;
             # 4. Update weights and biases i.e trainable parameters
