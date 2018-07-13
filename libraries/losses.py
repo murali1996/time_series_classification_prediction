@@ -39,6 +39,15 @@ def regression_error(y_true, y_pred, p=2):
     abs_diff = tf.abs(tf.subtract(y_true,y_pred))
     loss = tf.reduce_mean(tf.pow(abs_diff,p), name='regression_error')
     return loss
+# TODO: p-norm error
+def p_norm_error(y_true, y_pred, p=2):
+    """
+    p-norm error using only basic tensorflow ops.
+    (Do not use tf.losses, tf.nn, etc.)
+    """
+    abs_diff_with_power = tf.pow(tf.abs(y_true-y_pred),p)
+    loss = tf.reduce_mean(tf.pow(tf.reduce_mean(abs_diff_with_powerm, axis=-1), 1/p), name='p_norm_loss')
+    return loss
 # TODO: hinge loss
 def hinge_loss(y_true, y_pred):
     """
